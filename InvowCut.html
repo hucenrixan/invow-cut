@@ -163,7 +163,7 @@ h3{color:#6b7280}
     <option value="ellipse">Circle / Ellipse</option><option value="star">Star</option><option value="polygon">Polygon</option>
     <option value="heart">Heart</option><option value="arrow">Arrow</option><option value="badge">Badge (scalloped)</option><option value="triangle">Triangle</option><option value="diamond">Diamond</option><option value="cross">Cross / plus</option><option value="banner">Banner</option><option value="bubble">Speech bubble</option><option value="frame">Frame / border</option><option value="ring">Ring</option>
   </select>
-  <button id="bSvg" title="Import SVG (keeps colours as layers)">Import SVG</button>
+  <button id="bSvg" title="Open SVG, DXF or PLT cut files (SVG keeps colours as layers)">Import SVG / DXF / PLT</button>
   <button id="bImg" title="Trace a PNG/JPG into cut lines">Trace image</button>
   <button id="bPC" title="Print a picture, then cut around it">🖨 Print &amp; Cut</button>
   <div class="sep"></div>
@@ -204,6 +204,7 @@ h3{color:#6b7280}
     <button data-tool="polygon" title="Polygon – drag"><svg viewBox="0 0 24 24"><path d="M12 3l8 5v8l-8 5-8-5V8z"/></svg></button>
     <button data-tool="triangle" title="Triangle – drag"><svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/></svg></button>
     <button data-tool="pen" title="Pen – click points, double-click or click the first point to finish (P)"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/></svg></button>
+    <button data-tool="node" title="Points – move, add or delete points of a shape (N)"><svg viewBox="0 0 24 24"><path d="M4 18L10 6l10 6"/><rect x="2.5" y="16.5" width="3" height="3"/><rect x="8.5" y="4.5" width="3" height="3"/><rect x="18.5" y="10.5" width="3" height="3"/></svg></button>
     <button data-tool="knife" title="Knife – drag a line across a shape to cut it in two (K)"><svg viewBox="0 0 24 24"><path d="M3 21L14 10"/><path d="M14 10l3-7 4 4-7 3z"/><path d="M2 14l8 8" stroke-dasharray="2 2"/></svg></button>
     <div class="tsep"></div>
     <button data-tool="pan" title="Hand – drag to move the view (H)"><svg viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 013 0v6M11 11V4a1.5 1.5 0 013 0v7M14 11V5.5a1.5 1.5 0 013 0V14a7 7 0 01-7 7h-.5a6 6 0 01-5-2.7L3 15.5a1.5 1.5 0 012.5-1.6L8 16"/></svg></button>
@@ -225,7 +226,7 @@ h3{color:#6b7280}
   <aside>
     <div class="tabs" id="tabs">
       <button data-t="obj" class="on">Object</button><button data-t="objs">Objects</button><button data-t="lib">Library</button><button data-t="layers">Layers</button>
-      <button data-t="job">Job</button><button data-t="price">Price</button><button data-t="mat">Material</button><button data-t="mach">Machine</button>
+      <button data-t="job">Job</button><button data-t="price">Price</button><button data-t="mat">Material</button><button data-t="mach">Machine</button><button data-t="tools">Tools</button>
     </div>
 
     <div class="tabpane on" id="t-obj"><div id="objPanel"></div></div>
@@ -267,6 +268,7 @@ h3{color:#6b7280}
       <label class="row"><span>Mirror (heat-transfer)</span><input type="checkbox" data-s="mirror"></label>
       <label class="row"><span>Weed box</span><input type="checkbox" data-s="weedBox"></label>
       <label class="row"><span>Weed box margin (mm)</span><input type="number" step="1" min="0" data-s="weedMargin"></label>
+      <label class="row"><span>Weeding lines (between pieces)</span><input type="checkbox" data-s="weedLines"></label>
       <label class="row"><span>Alignment marks (multi-colour)</span><input type="checkbox" data-s="marks"></label>
       <label class="row"><span>Overcut (mm)</span><input type="number" step="0.1" min="0" max="3" data-s="overcut"></label>
       <label class="row"><span>Passes (cut each line)</span><input type="number" step="1" min="1" max="5" data-s="passes"></label>
@@ -311,6 +313,42 @@ h3{color:#6b7280}
       <label class="row"><span>Mirror</span><input type="checkbox" data-m="mirror"></label>
       <div class="btnrow"><button id="bMatAdd">＋ New preset</button><button id="bMatDel" class="danger">Delete preset</button></div>
       <p class="hint">Starting values only – always do a test cut on new vinyl. Force is set with the cutter's Mode button.</p>
+    </div>
+
+    <div class="tabpane" id="t-tools">
+      <h3>Text effects (2nd colour layer)</h3>
+      <label class="row"><span>Layer colour</span><select id="tlColor"><option value="#dc2626">Red</option><option value="#111111">Black</option><option value="#ffffff">White</option><option value="#2563eb">Blue</option><option value="#16a34a">Green</option><option value="#f59e0b">Yellow / gold</option><option value="#6b7280">Grey / silver</option></select></label>
+      <label class="row"><span>Outline thickness (mm)</span><input type="number" id="tlOut" value="2" step="0.5" min="0.3"></label>
+      <div class="btnrow"><button id="tlBtnOut">Add outline</button></div>
+      <label class="row"><span>Shadow → right / ↓ down (mm)</span><span><input type="number" id="tlSx" value="2" step="0.5" style="width:60px"> <input type="number" id="tlSy" value="2" step="0.5" style="width:60px"></span></label>
+      <div class="btnrow"><button id="tlBtnShadow">Add shadow</button></div>
+      <h3>Stencil bridges</h3>
+      <label class="row"><span>Bridge width (mm)</span><input type="number" id="tlBridge" value="2" step="0.5" min="0.5"></label>
+      <div class="btnrow"><button id="tlBtnBridge">Add bridges to selection</button></div>
+      <p class="hint">Keeps the middles of O, A, B, D, P, R… attached in a stencil.</p>
+      <h3>Names list / numbering</h3>
+      <textarea id="tlNames" placeholder="One name per line, e.g.&#10;JOHN&#10;SARA&#10;or a range: No. 001-050"></textarea>
+      <label class="row"><span>Gap between names (mm)</span><input type="number" id="tlNameGap" value="5" step="1" min="0"></label>
+      <div class="btnrow"><button id="tlBtnNames">Make copies (select a text first)</button></div>
+      <h3>QR code</h3>
+      <input type="text" class="full" id="tlQR" placeholder="Web address, phone number or text">
+      <label class="row"><span>Size (mm)</span><input type="number" id="tlQRSize" value="40" step="5" min="10"></label>
+      <label class="row"><span>Error correction</span><select id="tlQREcc"><option value="0">Low (smallest)</option><option value="1" selected>Medium</option><option value="2">Quartile</option><option value="3">High (strongest)</option></select></label>
+      <div class="btnrow"><button id="tlBtnQR">Add QR code</button></div>
+      <p class="hint">Scan it with your phone before cutting. 30 mm or bigger cuts best.</p>
+      <h3>Tiling – big signs in panels</h3>
+      <label class="row"><span>Panel size (mm, blank = auto)</span><input type="number" id="tlTile" step="10" min="50" placeholder="auto"></label>
+      <label class="row"><span>Overlap (mm)</span><input type="number" id="tlOverlap" value="10" step="1" min="0"></label>
+      <div class="btnrow"><button id="tlBtnTile">Split into panels</button></div>
+      <h3>Rhinestone template</h3>
+      <label class="row"><span>Stone size</span><select id="tlStone"><option value="2.0">SS6 – 2.0 mm</option><option value="2.8" selected>SS10 – 2.8 mm</option><option value="3.3">SS12 – 3.3 mm</option><option value="3.9">SS16 – 3.9 mm</option><option value="4.7">SS20 – 4.7 mm</option><option value="6.4">SS30 – 6.4 mm</option></select></label>
+      <label class="row"><span>Gap between stones (mm)</span><input type="number" id="tlStoneGap" value="1" step="0.25" min="0"></label>
+      <label class="row"><span>Layout</span><select id="tlStoneMode"><option value="outline">Outline only</option><option value="fill">Fill</option><option value="both">Outline + fill</option></select></label>
+      <div class="btnrow"><button id="tlBtnStones">Make stone holes</button></div>
+      <h3>Edit points</h3>
+      <p class="hint">Use the <b>Points</b> tool (N) in the left toolbox: drag a point to move it, double-click a line to add a point, select a point and press Delete to remove it.</p>
+      <h3>Open other files</h3>
+      <p class="hint"><b>Import</b> (top bar) opens SVG, DXF and PLT/HPGL. PDF / AI / EPS: save them as SVG or DXF first.</p>
     </div>
 
     <div class="tabpane" id="t-mach"><div class="btnrow"><button class="primary" onclick="openCutterSettings()">⚙ Open Cutter Settings window</button></div>
@@ -381,6 +419,8 @@ h3{color:#6b7280}
       <h4>3 · Cutting</h4>
       <label class="row"><span>Passes (cut each line)</span><input type="number" step="1" min="1" max="5" data-s="passes"></label>
       <label class="row"><span>Overcut (mm)</span><input type="number" step="0.1" min="0" max="3" data-s="overcut"></label>
+      <label class="row"><span>Blade offset (mm, 0 = off)</span><input type="number" step="0.05" min="0" max="1.5" data-s="bladeOffset"></label>
+      <label class="row"><span>Weeding lines</span><input type="checkbox" data-s="weedLines"></label>
       <label class="row"><span>Mirror (heat-transfer)</span><input type="checkbox" data-s="mirror"></label>
       <label class="row"><span>Weed box</span><input type="checkbox" data-s="weedBox"></label>
       <label class="row"><span>Start at cutter origin</span><input type="checkbox" data-s="startAtOrigin"></label>
@@ -426,7 +466,7 @@ h3{color:#6b7280}
 
 <div class="ctxmenu" id="ctx"></div>
 <div id="toast"></div>
-<input type="file" id="fSvg" accept=".svg,image/svg+xml" hidden>
+<input type="file" id="fSvg" accept=".svg,image/svg+xml,.dxf,.plt,.hpgl,.hpg,.plo,.pdf,.ai,.eps" hidden>
 <input type="file" id="fImg" accept="image/*" hidden>
 <input type="file" id="fPrint" accept="image/png,image/jpeg,image/webp" hidden>
 <dialog id="pcDlg">
@@ -485,7 +525,7 @@ const DEFAULTS = {
   nestGap:3, nestRotate:true, jobName:'', customer:'',
   currency:'', pricePerM:10, chargeUsedWidth:false, cutPerM:1, weedPerPiece:0.05, setupFee:2, markup:30, qty:1,
   hiddenLayers:[], material:0, curColor:'#111111',
-  safeMaxWidth:600, safeMaxLength:3000, safeConfirm:true, showArea:false, areaOn:true, testF:false, sideView:false, guide:null,
+  safeMaxWidth:600, safeMaxLength:3000, safeConfirm:true, showArea:false, areaOn:true, testF:false, sideView:false, guide:null, bladeOffset:0, weedLines:false,
   pcShow:false, pcPage:'A4', pcOrient:'portrait', pcInset:12, pcPrintAll:true
 };
 const MACHINE_KEYS=['vinylWidth','unitsX','unitsY','swapXY','flipAcross','flipFeed','margin','baud','flow','header','footer','safeMaxWidth','safeMaxLength'];
@@ -802,6 +842,7 @@ function draw(){
     const x=Math.min(a[0],b2[0]), y=Math.min(a[1],b2[1]), w=Math.abs(a[0]-b2[0]), h=Math.abs(a[1]-b2[1]);
     if(w>0.5&&h>0.5){ const cs=shapeContours(tool,{shape:tool,r:5,n:tool==='star'?5:6,inner:0.45},w,h); ctx.beginPath(); for(const c of cs){ c.forEach((p,i)=>i?ctx.lineTo(x+p[0],y+p[1]):ctx.moveTo(x+p[0],y+p[1])); ctx.closePath(); } ctx.stroke(); }
     ctx.setLineDash([]); ctx.fillStyle='#1d4ed8'; ctx.font=`11px Segoe UI`; ctx.save(); ctx.scale(px,px); ctx.fillText(`${r2(w)} × ${r2(h)} mm`,(x+w)*view.z+6,(y+h)*view.z+14); ctx.restore(); }
+  if(tool==='node') drawNodes(px);
   if(drag&&drag.mode==='knife'){ ctx.strokeStyle='#dc2626'; ctx.lineWidth=2*px; ctx.setLineDash([6*px,3*px]); ctx.beginPath(); ctx.moveTo(drag.a[0],drag.a[1]); ctx.lineTo(drag.b[0],drag.b[1]); ctx.stroke(); ctx.setLineDash([]); }
   if(settings.areaOn&&(port||settings.showArea)) drawCutArea(px);
   if(pen.length){ ctx.strokeStyle='#2563eb'; ctx.lineWidth=1.5*px; ctx.beginPath(); pen.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); if(penCursor) ctx.lineTo(penCursor[0],penCursor[1]); ctx.stroke();
@@ -833,6 +874,7 @@ cv.addEventListener('pointerdown',e=>{
   if(DRAW_TOOLS.includes(tool)){ drag={mode:'draw',a:m,b:m}; return; }
   if(tool==='pen'){ penClick(m); return; }
   if(tool==='knife'){ drag={mode:'knife',a:m,b:m}; return; }
+  if(tool==='node'){ const s=single(), h=s&&nodeHit(s,m); if(h){ nodeSel=h; drag={mode:'node',o:s,ci:h.ci,pi:h.pi}; draw(); return; } const hit=hitTest(m); nodeSel=null; if(hit) select([hit.id]); else sel.clear(); refreshPanel(); draw(); return; }
   const h=handleAt(m), s=single();
   if(h==='resize'){ drag={mode:'resize',o:s,anchor:objCorner(s,-s.w/2,-s.h/2),w0:s.w,h0:s.h}; return; }
   if(h==='rotate'){ drag={mode:'rotate',o:s,c:[s.x+s.w/2,s.y+s.h/2],r0:s.rot,a0:Math.atan2(m[1]-(s.y+s.h/2),m[0]-(s.x+s.w/2))}; return; }
@@ -848,6 +890,7 @@ cv.addEventListener('pointermove',e=>{
   if(!drag){ const h=handleAt(m); cv.style.cursor=spaceDown?'grab':h==='resize'?'nwse-resize':h==='rotate'?'alias':hitTest(m)?'move':'default'; return; }
   if(drag.mode==='pan'){ view.ox=drag.ox+e.clientX-drag.sx; view.oy=drag.oy+e.clientY-drag.sy; draw(); return; }
   if(drag.mode==='marquee'){ marquee.b=m; draw(); return; }
+  if(drag.mode==='node'){ if(!drag.started){ if(!makeEditable(drag.o)){ drag=null; return; } pushUndo(); drag.started=true; } nodeSetWorld(drag.o,drag.ci,drag.pi,m); draw(); return; }
   if(drag.mode==='knife'){ let b=m; if(e.shiftKey){ const dx=m[0]-drag.a[0], dy=m[1]-drag.a[1], an=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4), L=Math.hypot(dx,dy); b=[drag.a[0]+Math.cos(an)*L, drag.a[1]+Math.sin(an)*L]; } drag.b=b; draw(); return; }
   if(drag.mode==='draw'){ let b=m; if(e.shiftKey){ const dx=m[0]-drag.a[0], dy=m[1]-drag.a[1], s=Math.max(Math.abs(dx),Math.abs(dy)); b=[drag.a[0]+Math.sign(dx||1)*s, drag.a[1]+Math.sign(dy||1)*s]; } drag.b=b; draw(); return; }
   if(!drag.dirty){ pushUndo(); drag.dirty=true; }
@@ -863,6 +906,7 @@ cv.addEventListener('pointermove',e=>{
 cv.addEventListener('pointerup',()=>{
   if(drag&&drag.mode==='draw'){ const d=drag; drag=null; finishDraw(d.a,d.b); return; }
   if(drag&&drag.mode==='knife'){ const d=drag; drag=null; draw(); knifeCut(d.a,d.b); return; }
+  if(drag&&drag.mode==='node'){ const d=drag; drag=null; if(d.started){ bakeObj(d.o); changed(); } return; }
   if(drag&&drag.mode==='marquee'&&marquee){ const x0=Math.min(marquee.a[0],marquee.b[0]),x1=Math.max(marquee.a[0],marquee.b[0]),y0=Math.min(marquee.a[1],marquee.b[1]),y1=Math.max(marquee.a[1],marquee.b[1]);
     if(x1-x0>1/view.z&&y1-y0>1/view.z) for(const o of objects){ if(!vis(o)||o.locked) continue; const b=objBBox(o); if(b.x0>=x0&&b.x1<=x1&&b.y0>=y0&&b.y1<=y1) sel.add(o.id); }
     marquee=null; refreshPanel(); draw(); }
@@ -871,10 +915,10 @@ cv.addEventListener('wheel',e=>{ e.preventDefault(); const rc=cv.getBoundingClie
   const z=Math.min(80,Math.max(0.03,view.z*Math.exp(-e.deltaY*0.0015))); view.ox=mx-(mx-view.ox)*z/view.z; view.oy=my-(my-view.oy)*z/view.z; view.z=z; draw(); },{passive:false});
 let tool='select', pen=[], penCursor=null;
 const DRAW_TOOLS=['rect','rrect','ellipse','star','polygon','triangle'];
-const TOOL_NAMES={text:'Text tool',rect:'Rectangle',rrect:'Rounded rectangle',ellipse:'Circle / ellipse',star:'Star',polygon:'Polygon',triangle:'Triangle',pen:'Pen',knife:'Knife',pan:'Hand',zoom:'Zoom'};
+const TOOL_NAMES={text:'Text tool',rect:'Rectangle',rrect:'Rounded rectangle',ellipse:'Circle / ellipse',star:'Star',polygon:'Polygon',triangle:'Triangle',pen:'Pen',knife:'Knife',node:'Points',pan:'Hand',zoom:'Zoom'};
 const TOOL_HINTS={select:'Click to select · Shift+click to add · drag on empty space to box-select · double-click text to edit',text:'Click on the vinyl where the text should start',
   rect:'Drag to draw (Shift = square)',rrect:'Drag to draw (Shift = square)',ellipse:'Drag to draw (Shift = circle)',star:'Drag to draw',polygon:'Drag to draw',triangle:'Drag to draw',
-  pen:'Click to add points · click the first point, double-click or press Enter to finish · Esc cancels',knife:'Drag a line across a shape to cut it in two (Shift = straight/45°). Select shapes first to cut only those.',pan:'Drag to move the view',zoom:'Click to zoom in · Alt+click to zoom out'};
+  pen:'Click to add points · click the first point, double-click or press Enter to finish · Esc cancels',node:'Click a shape, then drag its points · double-click a line to add a point · select a point + Delete to remove it',knife:'Drag a line across a shape to cut it in two (Shift = straight/45°). Select shapes first to cut only those.',pan:'Drag to move the view',zoom:'Click to zoom in · Alt+click to zoom out'};
 function setTool(t){ if(t!=='pen') pen=[]; tool=t; $$('#toolbox [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t)); refreshPropbar(); draw(); }
 async function createTextAt(m){ pushUndo(); const o=newObj('text',{x:m[0],y:m[1],h:20,params:{text:'Text',font:settings.lastFont||'Arial',bold:true,italic:false,spacing:0,lineHeight:1.2,align:'left',curve:0}});
   await regen(o); o.y=m[1]-o.h/2; objects.push(o); select([o.id]); setTool('select'); showTab('obj'); changed(); const t=$('#propbar .pbtext'); if(t){ t.focus(); t.select(); } }
@@ -883,7 +927,7 @@ function finishDraw(a,b){ let x=Math.min(a[0],b[0]), y=Math.min(a[1],b[1]), w=Ma
 function penClick(m){ if(pen.length>2&&Math.hypot(m[0]-pen[0][0],m[1]-pen[0][1])<7/view.z){ finishPen(); return; } const l=pen[pen.length-1]; if(!l||Math.hypot(m[0]-l[0],m[1]-l[1])>0.3) pen.push(m); draw(); }
 function finishPen(){ const pts=pen.slice(); pen=[]; penCursor=null; if(pts.length<3){ toast('A pen shape needs 3 or more points.',true); draw(); return; }
   pushUndo(); const o=objFromWorld([pts],settings.curColor); objects.push(o); select([o.id]); setTool('select'); changed(); }
-cv.addEventListener('dblclick',e=>{ if(tool==='pen'){ finishPen(); return; } const o=hitTest(toMM(e)); if(o&&o.kind==='text'){ select([o.id]); showTab('obj'); refreshPanel(); const t=$('#objPanel textarea'); if(t){ t.focus(); t.select(); } } });
+cv.addEventListener('dblclick',e=>{ if(tool==='pen'){ finishPen(); return; } if(tool==='node'){ const s=single(); if(s) nodeInsert(s,toMM(e)); return; } const o=hitTest(toMM(e)); if(o&&o.kind==='text'){ select([o.id]); showTab('obj'); refreshPanel(); const t=$('#objPanel textarea'); if(t){ t.focus(); t.select(); } } });
 window.addEventListener('resize',draw);
 window.addEventListener('keyup',e=>{ if(e.code==='Space') spaceDown=false; });
 window.addEventListener('keydown',e=>{
@@ -895,10 +939,10 @@ window.addEventListener('keydown',e=>{
   else if(ctrl&&k==='d'){ e.preventDefault(); duplicate(); }
   else if(ctrl&&k==='s'){ e.preventDefault(); saveProject(); }
   else if(ctrl&&k==='a'){ e.preventDefault(); select(objects.filter(o=>vis(o)).map(o=>o.id)); refreshPanel(); draw(); }
-  else if(k==='delete'||k==='backspace'){ e.preventDefault(); del(); }
+  else if(k==='delete'||k==='backspace'){ e.preventDefault(); if(tool==='node'&&nodeSel) nodeDelete(); else del(); }
   else if(k==='escape'){ if(pen.length){ pen=[]; penCursor=null; } setTool('select'); }
   else if(k==='enter'&&pen.length){ finishPen(); }
-  else if(!ctrl&&!e.altKey&&({v:1,t:1,r:1,e:1,p:1,k:1,h:1,z:1})[k]){ setTool({v:'select',t:'text',r:'rect',e:'ellipse',p:'pen',k:'knife',h:'pan',z:'zoom'}[k]); }
+  else if(!ctrl&&!e.altKey&&({v:1,t:1,r:1,e:1,p:1,k:1,n:1,h:1,z:1})[k]){ setTool({v:'select',t:'text',r:'rect',e:'ellipse',p:'pen',k:'knife',n:'node',h:'pan',z:'zoom'}[k]); }
   else if(sel.size&&e.key.startsWith('Arrow')){ e.preventDefault(); pushUndo(); const d=e.shiftKey?10:1;
     for(const o of selected()){ if(e.key==='ArrowLeft') o.x-=d; if(e.key==='ArrowRight') o.x+=d; if(e.key==='ArrowUp') o.y-=d; if(e.key==='ArrowDown') o.y+=d; } changed(); }
 });
@@ -1363,7 +1407,7 @@ async function pcCut(){
   if(!polys.length){ toast('Nothing to cut.',true); return; }
   polys=orderPaths(polys,M[0]); const oc=+settings.overcut||0, passes=Math.max(1,Math.min(5,Math.round(+settings.passes||1)));
   const parts=[settings.header];
-  for(const c of polys){ const p=c.length>2?closeWithOvercut(c,oc):c; for(let k=0;k<passes;k++){ const q=p.map(T); parts.push('U'+q[0][0]+','+q[0][1]); for(let i=1;i<q.length;i++) parts.push('D'+q[i][0]+','+q[i][1]); } }
+  for(const c of polys){ const p=bladeComp(c.length>2?closeWithOvercut(c,oc):c,+settings.bladeOffset||0); for(let k=0;k<passes;k++){ const q=p.map(T); parts.push('U'+q[0][0]+','+q[0][1]); for(let i=1;i<q.length;i++) parts.push('D'+q[i][0]+','+q[i][1]); } }
   parts.push('U'); parts.push('U0,0');
   if(await sendToCutter(parts.join(' ')+' '+settings.footer+' '+' '.repeat(120),{confirm:'Print & Cut'})){ try{ recordJob(null); }catch(e){} } }
 function openPC(){ syncSettingsUI(); $('#pcDlg').showModal(); pcStatus(); }
@@ -1400,6 +1444,246 @@ function drawPcPage(px){ const {W,H}=pcPage();
   pcMarks().forEach(([x,y],k)=>{ ctx.strokeStyle=k===0?'#16a34a':'#111'; ctx.lineWidth=1.2*px; ctx.beginPath(); ctx.arc(x,y,3,0,7); ctx.moveTo(x-6,y); ctx.lineTo(x+6,y); ctx.moveTo(x,y-6); ctx.lineTo(x,y+6); ctx.stroke();
     ctx.fillStyle=ctx.strokeStyle; ctx.font=`600 ${12*px}px Segoe UI`; ctx.fillText(String(k+1),x+4,y-4); }); }
 
+/* ======================= extra tools (blade offset, weeding lines, effects, stencil, names, QR, tiling, rhinestones, DXF/PLT) ======================= */
+const unit2=(a,b)=>{ const dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy); return l>1e-9?[dx/l,dy/l]:null; };
+
+/* ---- blade offset: the tip trails behind the holder; lead each segment by the offset and swing round corners ---- */
+function bladeComp(pts,o){ if(!(o>0)||pts.length<2) return pts; const out=[]; let prev=null;
+  for(let i=0;i<pts.length-1;i++){ const d=unit2(pts[i],pts[i+1]); if(!d) continue; const p=pts[i];
+    if(prev){ const a0=Math.atan2(prev[1],prev[0]), a1=Math.atan2(d[1],d[0]); let da=a1-a0; while(da>Math.PI) da-=2*Math.PI; while(da<-Math.PI) da+=2*Math.PI;
+      if(Math.abs(da)>0.17){ const steps=Math.max(2,Math.ceil(Math.abs(da)/0.26)); for(let k=1;k<steps;k++){ const a=a0+da*k/steps; out.push([p[0]+o*Math.cos(a),p[1]+o*Math.sin(a)]); } } }
+    out.push([p[0]+o*d[0],p[1]+o*d[1]]); out.push([pts[i+1][0]+o*d[0],pts[i+1][1]+o*d[1]]); prev=d; }
+  return out.length?out:pts; }
+
+/* ---- weeding lines: straight cuts through the empty gaps between pieces ---- */
+function weedLinesFor(polys,ref){ const lines=[];
+  const gaps=(iv)=>{ iv.sort((a,b)=>a[0]-b[0]); const m=[]; for(const v of iv){ const l=m[m.length-1]; if(l&&v[0]<=l[1]) l[1]=Math.max(l[1],v[1]); else m.push(v.slice()); }
+    const g=[]; for(let i=1;i<m.length;i++) if(m[i][0]-m[i-1][1]>=1.5) g.push((m[i][0]+m[i-1][1])/2); return g; };
+  const bbs=polys.filter(c=>c.length>2).map(c=>bboxOf([c]));
+  for(const x of gaps(bbs.map(b=>[b.x0,b.x1]))) lines.push([[x,ref.y0],[x,ref.y1]]);
+  for(const y of gaps(bbs.map(b=>[b.y0,b.y1]))) lines.push([[ref.x0,y],[ref.x1,y]]);
+  return lines; }
+
+/* ---- outline & shadow layers (second vinyl colour, placed behind) ---- */
+function toolColor(){ return ($('#tlColor')||{}).value||'#dc2626'; }
+async function addOutlineLayer(){ const list=selected(); if(!list.length){ toast('Select the text or shape first.',true); return; }
+  const d=Math.max(0.3,parseFloat($('#tlOut').value)||2);
+  await busy(async()=>{ const R=rasterize(list.map(o=>({polys:objWorld(o),op:'add'})),d+2,6e6); let cs=fieldToMM(R,offsetField(R,d)); const dp=depths(cs); cs=cs.filter((c,i)=>dp[i]===0);
+    if(!cs.length){ toast('Could not make an outline.',true); return; }
+    pushUndo(); const o=objFromWorld(cs,toolColor()); const idx=Math.min(...list.map(x=>objects.indexOf(x))); objects.splice(Math.max(0,idx),0,o);
+    select([o.id]); changed(); toast(`Outline layer added (${d} mm) in ${colorName(o.color)} – cut it on that colour vinyl and stick the text on top.`); }); }
+async function addShadowLayer(){ const list=selected(); if(!list.length){ toast('Select the text or shape first.',true); return; }
+  const dx=parseFloat($('#tlSx').value)||0, dy=parseFloat($('#tlSy').value)||0; if(!dx&&!dy){ toast('Set a shadow distance.',true); return; }
+  await busy(async()=>{ const groups=list.map(o=>({polys:objWorld(o).map(c=>c.map(p=>[p[0]+dx,p[1]+dy])),op:'add'})); const cs=fieldToMM(rasterize(groups,1,6e6));
+    if(!cs.length){ toast('Could not make a shadow.',true); return; }
+    pushUndo(); const o=objFromWorld(cs,toolColor()); const idx=Math.min(...list.map(x=>objects.indexOf(x))); objects.splice(Math.max(0,idx),0,o);
+    select([o.id]); changed(); toast(`Shadow layer added in ${colorName(o.color)}.`); }); }
+
+/* ---- stencil bridges: thin strips that keep the middles of letters (O, A, B…) attached ---- */
+async function stencilBridges(){ const list=selected(); if(!list.length){ toast('Select the text or shape first.',true); return; }
+  const bw=Math.max(0.5,parseFloat($('#tlBridge').value)||2);
+  await busy(async()=>{ pushUndo(); let made=0; const ids=[];
+    for(const o of list){ const cs=objWorld(o), dp=depths(cs), bb=bboxOf(cs), strips=[];
+      cs.forEach((c,i)=>{ if(dp[i]%2===1){ const b=bboxOf([c]), cx=(b.x0+b.x1)/2; strips.push([[cx-bw/2,bb.y0-1],[cx+bw/2,bb.y0-1],[cx+bw/2,bb.y1+1],[cx-bw/2,bb.y1+1]]); } });
+      if(!strips.length){ ids.push(o.id); continue; }
+      const out=fieldToMM(rasterize([{polys:cs,op:'add'},{polys:strips,op:'sub'}],1,8e6)); if(!out.length){ ids.push(o.id); continue; }
+      const n=objFromWorld(out,o.color); const idx=objects.indexOf(o); objects.splice(idx,1,n); ids.push(n.id); made++; }
+    if(!made){ undoStack.pop(); toast('No letter middles found – nothing needs a bridge.'); return; }
+    select(ids); changed(); toast(`Stencil bridges added (${bw} mm).`); }); }
+
+/* ---- names list / numbering ---- */
+function expandNames(txt){ const out=[];
+  for(const raw of txt.split(/\r?\n/)){ const line=raw.trim(); if(!line) continue;
+    const m=line.match(/^(.*?)(\d+)\s*-\s*(\d+)(.*)$/);
+    if(m&&+m[3]>=+m[2]&&+m[3]-+m[2]<=500){ const pad=m[2].length>1&&m[2][0]==='0'?m[2].length:0; for(let k=+m[2];k<=+m[3];k++) out.push(m[1]+String(k).padStart(pad,'0')+m[4]); }
+    else out.push(line); }
+  return out; }
+async function namesList(){ const s=single(); if(!s||s.kind!=='text'){ toast('Select one text object first – its font and size are used for every name.',true); return; }
+  const names=expandNames($('#tlNames').value); if(!names.length){ toast('Type the names (one per line) or a range like 1-50.',true); return; }
+  if(names.length>500){ toast('Maximum 500 at once.',true); return; }
+  const gap=Math.max(0,parseFloat($('#tlNameGap').value)||5);
+  await busy(async()=>{ pushUndo(); const ids=[s.id]; let y=s.y+s.h+gap; s.params.text=names[0]; await regen(s);
+    for(const nm of names.slice(1)){ const c=JSON.parse(JSON.stringify(s)); c.id=nextId++; c.params.text=nm; c.y=y; await regen(c); objects.push(c); ids.push(c.id); y+=c.h+gap; }
+    select(ids); changed(); fit(); toast(`${names.length} copies made. Use Nest to pack them tightly.`); }); }
+
+/* ---- QR code (byte mode, own encoder) ---- */
+const QR=(()=>{
+  const ECC=[[-1,7,10,15,20,26,18,20,24,30,18,20,24,26,30,22,24,28,30,28,28,28,28,30,30,26,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+             [-1,10,16,26,18,24,16,18,22,22,26,30,22,22,24,24,28,28,26,26,26,26,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28,28],
+             [-1,13,22,18,26,18,24,18,22,20,24,28,26,24,20,30,24,28,28,26,30,28,30,30,30,30,28,30,30,30,30,30,30,30,30,30,30,30,30,30,30],
+             [-1,17,28,22,16,22,28,26,26,24,28,24,28,22,24,24,30,28,28,26,28,30,24,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]];
+  const NB=[[-1,1,1,1,1,1,2,2,2,2,4,4,4,4,4,6,6,6,6,7,8,8,9,9,10,12,12,12,13,14,15,16,17,18,19,19,20,21,22,24,25],
+            [-1,1,1,1,2,2,4,4,4,5,5,5,8,9,9,10,10,11,13,14,16,17,17,18,20,21,23,25,26,28,29,31,33,35,37,38,40,43,45,47,49],
+            [-1,1,1,2,2,4,4,6,6,8,8,8,10,12,16,12,17,16,18,21,20,23,23,25,27,29,34,34,35,38,40,43,45,48,51,53,56,59,62,65,68],
+            [-1,1,1,2,4,4,4,5,6,8,8,11,11,16,16,18,16,19,21,25,25,25,34,30,32,35,37,40,42,45,48,51,54,57,60,63,66,70,74,77,81]];
+  const FMT=[1,0,3,2]; // L M Q H format bits
+  const rawMods=v=>{ let r=(16*v+128)*v+64; if(v>=2){ const na=Math.floor(v/7)+2; r-=(25*na-10)*na-55; if(v>=7) r-=36; } return r; };
+  const dataCw=(v,e)=>Math.floor(rawMods(v)/8)-ECC[e][v]*NB[e][v];
+  const mul=(x,y)=>{ let z=0; for(let i=7;i>=0;i--){ z=(z<<1)^((z>>>7)*0x11D); z^=((y>>>i)&1)*x; } return z&255; };
+  const rsDiv=deg=>{ const r=new Array(deg).fill(0); r[deg-1]=1; let root=1; for(let i=0;i<deg;i++){ for(let j=0;j<deg;j++){ r[j]=mul(r[j],root); if(j+1<deg) r[j]^=r[j+1]; } root=mul(root,2); } return r; };
+  const rsRem=(data,div)=>{ const r=div.map(()=>0); for(const b of data){ const f=b^r.shift(); r.push(0); div.forEach((c,i)=>r[i]^=mul(c,f)); } return r; };
+  const alignPos=v=>{ if(v===1) return []; const na=Math.floor(v/7)+2, size=v*4+17, step=v===32?26:Math.ceil((v*4+4)/(na*2-2))*2; const r=[6]; for(let p=size-7;r.length<na;p-=step) r.splice(1,0,p); return r; };
+  function encode(text,eLevel){ const e=eLevel??1, bytes=[...new TextEncoder().encode(text)];
+    let v=1; for(;v<=40;v++){ const cc=v<10?8:16; if(4+cc+bytes.length*8<=dataCw(v,e)*8) break; } if(v>40) throw new Error('Text too long for a QR code');
+    const bits=[]; const put=(val,n)=>{ for(let i=n-1;i>=0;i--) bits.push((val>>>i)&1); };
+    put(4,4); put(bytes.length,v<10?8:16); for(const b of bytes) put(b,8);
+    const cap=dataCw(v,e)*8; put(0,Math.min(4,cap-bits.length)); while(bits.length%8) bits.push(0);
+    for(let pad=0xEC;bits.length<cap;pad^=0xEC^0x11) put(pad,8);
+    const data=[]; for(let i=0;i<bits.length;i+=8){ let b=0; for(let j=0;j<8;j++) b=(b<<1)|bits[i+j]; data.push(b); }
+    // ECC + interleave
+    const nb=NB[e][v], el=ECC[e][v], raw=Math.floor(rawMods(v)/8), nShort=nb-raw%nb, shortLen=Math.floor(raw/nb), div=rsDiv(el), blocks=[];
+    for(let i=0,k=0;i<nb;i++){ const dat=data.slice(k,k+shortLen-el+(i<nShort?0:1)); k+=dat.length; const ecc=rsRem(dat,div); if(i<nShort) dat.push(0); blocks.push(dat.concat(ecc)); }
+    const cw=[]; for(let i=0;i<blocks[0].length;i++) blocks.forEach((b,j)=>{ if(i!==shortLen-el||j>=nShort) cw.push(b[i]); });
+    // modules
+    const size=v*4+17, M=[...Array(size)].map(()=>Array(size).fill(false)), F=[...Array(size)].map(()=>Array(size).fill(false));
+    const set=(x,y,d)=>{ M[y][x]=d; F[y][x]=true; };
+    for(let i=0;i<size;i++){ set(6,i,i%2===0); set(i,6,i%2===0); }
+    const finder=(x,y)=>{ for(let dy=-4;dy<=4;dy++) for(let dx=-4;dx<=4;dx++){ const d=Math.max(Math.abs(dx),Math.abs(dy)), xx=x+dx, yy=y+dy; if(xx>=0&&xx<size&&yy>=0&&yy<size) set(xx,yy,d!==2&&d!==4); } };
+    finder(3,3); finder(size-4,3); finder(3,size-4);
+    const ap=alignPos(v), na=ap.length;
+    for(let i=0;i<na;i++) for(let j=0;j<na;j++){ if((i===0&&j===0)||(i===0&&j===na-1)||(i===na-1&&j===0)) continue;
+      for(let dy=-2;dy<=2;dy++) for(let dx=-2;dx<=2;dx++) set(ap[i]+dx,ap[j]+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1); }
+    const fmt=mask=>{ const d=FMT[e]<<3|mask; let r=d; for(let i=0;i<10;i++) r=(r<<1)^((r>>>9)*0x537); const b=((d<<10)|r)^0x5412, g=i=>((b>>>i)&1)===1;
+      for(let i=0;i<=5;i++) set(8,i,g(i)); set(8,7,g(6)); set(8,8,g(7)); set(7,8,g(8)); for(let i=9;i<15;i++) set(14-i,8,g(i));
+      for(let i=0;i<8;i++) set(size-1-i,8,g(i)); for(let i=8;i<15;i++) set(8,size-15+i,g(i)); set(8,size-8,true); };
+    fmt(0);
+    if(v>=7){ let r=v; for(let i=0;i<12;i++) r=(r<<1)^((r>>>11)*0x1F25); const b=v<<12|r; for(let i=0;i<18;i++){ const bit=((b>>>i)&1)===1, a=size-11+i%3, c=Math.floor(i/3); set(a,c,bit); set(c,a,bit); } }
+    let i=0; for(let right=size-1;right>=1;right-=2){ if(right===6) right=5;
+      for(let vert=0;vert<size;vert++) for(let j=0;j<2;j++){ const x=right-j, up=((right+1)&2)===0, y=up?size-1-vert:vert;
+        if(!F[y][x]&&i<cw.length*8){ M[y][x]=((cw[i>>>3]>>>(7-(i&7)))&1)===1; i++; } } }
+    const maskFn=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,
+      (x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+    const apply=m=>{ for(let y=0;y<size;y++) for(let x=0;x<size;x++) if(!F[y][x]&&maskFn[m](x,y)) M[y][x]=!M[y][x]; };
+    const penalty=()=>{ let p=0; for(let y=0;y<size;y++){ let run=1; for(let x=1;x<size;x++){ if(M[y][x]===M[y][x-1]){ run++; if(run===5) p+=3; else if(run>5) p++; } else run=1; } }
+      for(let x=0;x<size;x++){ let run=1; for(let y=1;y<size;y++){ if(M[y][x]===M[y-1][x]){ run++; if(run===5) p+=3; else if(run>5) p++; } else run=1; } }
+      for(let y=0;y<size-1;y++) for(let x=0;x<size-1;x++){ const c=M[y][x]; if(c===M[y][x+1]&&c===M[y+1][x]&&c===M[y+1][x+1]) p+=3; }
+      let dark=0; for(const r of M) for(const c of r) if(c) dark++; p+=Math.floor(Math.abs(dark*20-size*size*10)/(size*size))*10; return p; };
+    let best=0, bp=Infinity; for(let m=0;m<8;m++){ apply(m); fmt(m); const p=penalty(); if(p<bp){ bp=p; best=m; } apply(m); }
+    apply(best); fmt(best); return {size,modules:M,version:v,mask:best}; }
+  return {encode};
+})();
+async function addQR(){ const txt=$('#tlQR').value.trim(); if(!txt){ toast('Type the text or web address for the QR code.',true); return; }
+  const mm=Math.max(10,parseFloat($('#tlQRSize').value)||40), e=+$('#tlQREcc').value;
+  let q; try{ q=QR.encode(txt,e); }catch(err){ toast(err.message,true); return; }
+  const s=q.size, sc=8, W=(s+2)*sc, f=new Uint8Array(W*W);
+  for(let y=0;y<s;y++) for(let x=0;x<s;x++) if(q.modules[y][x]) for(let yy=0;yy<sc;yy++) for(let xx=0;xx<sc;xx++) f[((y+1)*sc+yy)*W+(x+1)*sc+xx]=255;
+  const k=mm/(s*sc), cs=traceField(f,W,W,128).map(c=>c.map(p=>[(p[0]-sc)*k,(p[1]-sc)*k])).map(c=>simplifyClosed(c,k*0.6));
+  pushUndo(); const o=objFromWorld(cs,settings.curColor||'#111111'); o.params={qr:txt}; placeNew(o); changed(); fit();
+  toast(`QR code added (${mm} mm, ${s}×${s} squares). Leave a clear border around it, and scan it with your phone before cutting.`); }
+
+/* ---- tiling: split a sign that is bigger than the vinyl into overlapping panels ---- */
+async function tileDesign(){ const src=(sel.size?selected():objects).filter(o=>vis(o)&&o.contours.length&&o.kind!=='print'); if(!src.length){ toast('Nothing to tile.',true); return; }
+  const side=isSide(), b=jobBBox(src), along=side?b.y1-b.y0:b.x1-b.x0;
+  const tw=Math.max(50,parseFloat($('#tlTile').value)||((Math.min(settings.vinylWidth,+settings.safeMaxWidth||600))-2*(+settings.margin||0)-10)), ov=Math.max(0,parseFloat($('#tlOverlap').value)||10);
+  if(along<=tw){ toast(`The design is ${r2(along)} mm – it already fits in one ${tw} mm panel.`); return; }
+  if(ov>=tw/2){ toast('Overlap is too big for this panel size.',true); return; }
+  const n=Math.ceil((along-ov)/(tw-ov));
+  await busy(async()=>{ pushUndo(); const colors=[...new Set(src.map(o=>o.color))], ids=[], across=side?b.x1-b.x0:b.y1-b.y0;
+    for(let k=0;k<n;k++){ const a0=(side?b.y0:b.x0)+k*(tw-ov), a1=Math.min(a0+tw,side?b.y1:b.x1);
+      const rect=side?[[b.x0-1,a0],[b.x1+1,a0],[b.x1+1,a1],[b.x0-1,a1]]:[[a0,b.y0-1],[a1,b.y0-1],[a1,b.y1+1],[a0,b.y1+1]];
+      for(const col of colors){ const polys=src.filter(o=>o.color===col).flatMap(o=>objWorld(o)); if(!polys.length) continue;
+        const cs=fieldToMM(rasterize([{polys,op:'add'},{polys:[rect],op:'int'}],1,8e6)); if(!cs.length) continue;
+        // panels are laid out one after another down the roll so each can be cut on its own
+        const shift=side?[(across+30)*k-(a0-b.y0)*0,0]:[0,0];
+        const moved=side?cs.map(c=>c.map(p=>[p[0]+(across+30)*k,p[1]-(a0-b.y0)])):cs.map(c=>c.map(p=>[p[0]-(a0-b.x0),p[1]+(across+30)*k]));
+        const o=objFromWorld(moved,col); o.params={tile:k+1}; objects.push(o); ids.push(o.id); } }
+    objects=objects.filter(o=>!src.includes(o)); select(ids); changed(); fit();
+    toast(`Split into ${n} panels of up to ${tw} mm with ${ov} mm overlap. Panel 1 is first; stick them on in order, overlapping ${ov} mm.`); }); }
+
+/* ---- rhinestone template: circles along the outline or filling the shape ---- */
+function circlePoly(cx,cy,r,n){ const out=[]; for(let i=0;i<n;i++){ const a=i/n*2*Math.PI; out.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]); } return out; }
+function distToEdges(p,cs){ let d=Infinity; for(const c of cs) for(let i=0;i<c.length;i++){ const a=c[i], b=c[(i+1)%c.length], dx=b[0]-a[0], dy=b[1]-a[1], l=dx*dx+dy*dy;
+  let t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0; t=Math.max(0,Math.min(1,t)); d=Math.min(d,Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)); } return d; }
+async function rhinestones(){ const list=selected(); if(!list.length){ toast('Select the design first.',true); return; }
+  const stone=parseFloat($('#tlStone').value)||2.8, hole=stone+0.3, r=hole/2, gap=Math.max(0,parseFloat($('#tlStoneGap').value)||1), step=hole+gap, mode=$('#tlStoneMode').value;
+  await busy(async()=>{ const cs=list.flatMap(o=>objWorld(o)).filter(c=>c.length>2), pts=[];
+    if(mode!=='fill') for(const c of cs){ const ring=c.concat([c[0]]); let carry=0;
+      for(let i=1;i<ring.length;i++){ const a=ring[i-1], b=ring[i], L=Math.hypot(b[0]-a[0],b[1]-a[1]); let t=carry;
+        while(t<=L){ pts.push([a[0]+(b[0]-a[0])*t/L,a[1]+(b[1]-a[1])*t/L]); t+=step; } carry=t-L; } }
+    if(mode!=='outline'){ const bb=bboxOf(cs), dy=step*Math.sqrt(3)/2; let row=0;
+      for(let y=bb.y0+r;y<=bb.y1-r;y+=dy,row++) for(let x=bb.x0+r+(row%2?step/2:0);x<=bb.x1-r;x+=step){ let ins=false; for(const c of cs) if(pointInPoly([x,y],c)) ins=!ins;
+        if(ins&&distToEdges([x,y],cs)>=(mode==='both'?r+step*0.6:r*0.9)&&!pts.some(p=>Math.hypot(p[0]-x,p[1]-y)<step*0.9)) pts.push([x,y]); } }
+    const keep=[]; for(const p of pts) if(!keep.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<step*0.85)) keep.push(p);
+    if(!keep.length){ toast('Shape too small for these stones.',true); return; }
+    if(keep.length>3000){ toast(`That would be ${keep.length} stones – choose bigger stones or more gap.`,true); return; }
+    pushUndo(); const o=objFromWorld(keep.map(p=>circlePoly(p[0],p[1],r,14)),list[0].color); o.params={stones:keep.length};
+    for(const s of list) s.hidden=true; objects.push(o); select([o.id]); changed();
+    toast(`${keep.length} stone holes (${hole.toFixed(1)} mm). The original design is hidden (Objects tab). Cut this on rhinestone template material.`); }); }
+
+/* ---- open DXF and PLT/HPGL files ---- */
+function chainSegments(segs){ const out=[], used=new Array(segs.length).fill(false), eq=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<0.02;
+  for(let i=0;i<segs.length;i++){ if(used[i]) continue; used[i]=true; let ch=segs[i].slice(), grown=true;
+    while(grown){ grown=false; for(let j=0;j<segs.length;j++){ if(used[j]) continue; const s=segs[j];
+      if(eq(ch[ch.length-1],s[0])){ ch=ch.concat(s.slice(1)); } else if(eq(ch[ch.length-1],s[s.length-1])){ ch=ch.concat(s.slice(0,-1).reverse()); }
+      else if(eq(ch[0],s[s.length-1])){ ch=s.slice(0,-1).concat(ch); } else if(eq(ch[0],s[0])){ ch=s.slice(1).reverse().concat(ch); } else continue;
+      used[j]=true; grown=true; } }
+    if(ch.length>2&&eq(ch[0],ch[ch.length-1])) ch.pop(); out.push(ch); }
+  return out; }
+function arcPts(cx,cy,r,a0,a1){ if(a1<a0) a1+=2*Math.PI; const n=Math.max(8,Math.ceil((a1-a0)/(Math.PI/36))), o=[]; for(let i=0;i<=n;i++){ const a=a0+(a1-a0)*i/n; o.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]); } return o; }
+function bulgePts(a,b,bulge){ if(!bulge) return [b]; const th=4*Math.atan(bulge), d=Math.hypot(b[0]-a[0],b[1]-a[1]); if(d<1e-9) return [b];
+  const r=d/(2*Math.sin(th/2)), mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2, h=r*Math.cos(th/2), nx=-(b[1]-a[1])/d, ny=(b[0]-a[0])/d, cx=mx+nx*h, cy=my+ny*h;
+  const a0=Math.atan2(a[1]-cy,a[0]-cx); const n=Math.max(4,Math.ceil(Math.abs(th)/(Math.PI/36))), o=[]; for(let i=1;i<=n;i++){ const t=a0+th*i/n; o.push([cx+Math.abs(r)*Math.cos(t)*Math.sign(r)||cx,cy]); }
+  // recompute precisely with signed sweep
+  o.length=0; const rr=Math.hypot(a[0]-cx,a[1]-cy); for(let i=1;i<=n;i++){ const t=a0+th*i/n; o.push([cx+rr*Math.cos(t),cy+rr*Math.sin(t)]); } return o; }
+function parseDXF(text){ const L=text.split(/\r?\n/); const pairs=[]; for(let i=0;i+1<L.length;i+=2) pairs.push([+L[i].trim(),L[i+1].trim()]);
+  let units=1; const hu=pairs.findIndex(p=>p[0]===9&&p[1]==='$INSUNITS'); if(hu>=0){ const u=+pairs[hu+1][1]; units=u===1?25.4:u===5?10:u===6?1000:u===2?304.8:1; }
+  const segs=[], closed=[]; let i=pairs.findIndex(p=>p[0]===2&&p[1]==='ENTITIES'); if(i<0) i=0;
+  const ent=()=>{ const t=pairs[i][1], d={}; const list=[]; i++; while(i<pairs.length&&pairs[i][0]!==0){ const [c,v]=pairs[i]; list.push([c,v]); (d[c]=d[c]||[]).push(v); i++; } return {t,d,list}; };
+  while(i<pairs.length){ if(pairs[i][0]!==0){ i++; continue; } if(pairs[i][1]==='ENDSEC'||pairs[i][1]==='EOF') break; const e=ent(), n=k=>parseFloat((e.d[k]||[0])[0]);
+    if(e.t==='LINE') segs.push([[n(10),n(20)],[n(11),n(21)]]);
+    else if(e.t==='CIRCLE') closed.push(arcPts(n(10),n(20),n(40),0,2*Math.PI).slice(0,-1));
+    else if(e.t==='ARC') segs.push(arcPts(n(10),n(20),n(40),n(50)*Math.PI/180,n(51)*Math.PI/180));
+    else if(e.t==='ELLIPSE'){ const cx=n(10),cy=n(20),mx=n(11),my=n(21),ra=n(40),t0=e.d[41]?n(41):0,t1=e.d[42]?n(42):2*Math.PI, R=Math.hypot(mx,my), rot=Math.atan2(my,mx), pts=[];
+      const span=(t1<=t0?t1+2*Math.PI:t1)-t0, N=Math.max(16,Math.ceil(span/(Math.PI/36))); for(let k=0;k<=N;k++){ const t=t0+span*k/N, x=R*Math.cos(t), y=R*ra*Math.sin(t); pts.push([cx+x*Math.cos(rot)-y*Math.sin(rot),cy+x*Math.sin(rot)+y*Math.cos(rot)]); }
+      if(Math.abs(span-2*Math.PI)<1e-3){ pts.pop(); closed.push(pts); } else segs.push(pts); }
+    else if(e.t==='LWPOLYLINE'){ const pts=[], bul=[]; let cur=null; for(const [c,v] of e.list){ if(c===10){ cur=[+v,0]; pts.push(cur); bul.push(0); } else if(c===20&&cur) cur[1]=+v; else if(c===42&&pts.length) bul[pts.length-1]=+v; }
+      const isC=(parseInt((e.d[70]||['0'])[0])&1)===1, out=[pts[0]]; for(let k=0;k<pts.length-1+(isC?1:0);k++) out.push(...bulgePts(pts[k],pts[(k+1)%pts.length],bul[k]));
+      if(isC){ out.pop(); closed.push(out); } else segs.push(out); }
+    else if(e.t==='POLYLINE'){ const isC=(parseInt((e.d[70]||['0'])[0])&1)===1, pts=[], bul=[];
+      while(i<pairs.length&&!(pairs[i][0]===0&&pairs[i][1]==='SEQEND')){ if(pairs[i][0]===0&&pairs[i][1]==='VERTEX'){ const v=ent(); pts.push([parseFloat((v.d[10]||[0])[0]),parseFloat((v.d[20]||[0])[0])]); bul.push(parseFloat((v.d[42]||[0])[0])); } else i++; }
+      if(pts.length>1){ const out=[pts[0]]; for(let k=0;k<pts.length-1+(isC?1:0);k++) out.push(...bulgePts(pts[k],pts[(k+1)%pts.length],bul[k])); if(isC){ out.pop(); closed.push(out); } else segs.push(out); } }
+    else if(e.t==='SPLINE'){ const xs=(e.d[11]&&e.d[11].length>1)?e.d[11]:e.d[10], ys=(e.d[21]&&e.d[21].length>1)?e.d[21]:e.d[20]; if(xs&&ys){ const pts=xs.map((x,k)=>[+x,+(ys[k]||0)]); if(pts.length>1) segs.push(pts); } } }
+  const all=closed.concat(chainSegments(segs)).filter(c=>c.length>1);
+  return all.map(c=>c.map(p=>[p[0]*units,-p[1]*units])); }
+function parsePLT(text){ const paths=[]; let cur=null, pen=false, x=0, y=0, rel=false; const hpgl=/(?:^|;)\s*(IN|PU|PD|PA|PR|SP)/i.test(text), k=1/40;
+  const flush=()=>{ if(cur&&cur.length>1) paths.push(cur); cur=null; };
+  const re=/([A-Z@]{1,2})\s*([-\d.,\s]*)/gi; let m;
+  while((m=re.exec(text))){ const cmd=m[1].toUpperCase(), nums=(m[2].match(/-?\d+(\.\d+)?/g)||[]).map(Number);
+    if(cmd==='PA'){ rel=false; } else if(cmd==='PR'){ rel=true; }
+    let down=null; if(cmd==='PU'||cmd==='U') down=false; else if(cmd==='PD'||cmd==='D') down=true; else if(cmd!=='PA'&&cmd!=='PR') continue;
+    if(down!==null&&down!==pen){ if(!down) flush(); pen=down; }
+    for(let j=0;j+1<nums.length;j+=2){ x=rel?x+nums[j]:nums[j]; y=rel?y+nums[j+1]:nums[j+1];
+      if(pen){ if(!cur) cur=[[x,y]]; else cur.push([x,y]); } else { flush(); cur=[[x,y]]; } } }
+  flush(); const eq=(a,b)=>Math.abs(a[0]-b[0])<2&&Math.abs(a[1]-b[1])<2;
+  return paths.map(c=>{ if(c.length>2&&eq(c[0],c[c.length-1])) c=c.slice(0,-1); return c.map(p=>[p[0]*k,(hpgl?-p[1]:p[1])*k]); }); }
+async function importCutFile(file){ const name=file.name.toLowerCase(), text=await file.text();
+  let cs; try{ cs=/\.dxf$/.test(name)?parseDXF(text):parsePLT(text); }catch(e){ toast('Could not read this file: '+e.message,true); return; }
+  cs=cs.filter(c=>c.length>1); if(!cs.length){ toast('No cut lines found in this file.',true); return; }
+  pushUndo(); const o=objFromWorld(cs,settings.curColor||'#111111','svg'); o.params={name:file.name}; placeNew(o); changed(); fit();
+  toast(`Opened ${file.name}: ${r2(o.w)} × ${r2(o.h)} mm, ${cs.length} line(s).`); }
+function importAny(file){ const n=file.name.toLowerCase();
+  if(/\.svg$/.test(n)) return importSvg(file);
+  if(/\.(dxf|plt|hpgl|hpg|plo)$/.test(n)) return importCutFile(file);
+  if(/\.(pdf|ai|eps|cdr)$/.test(n)){ toast('PDF / AI / EPS / CDR can\'t be opened directly. In the program that made it (or free Inkscape), save it as SVG or DXF, then open that.',true); return; }
+  if(/\.(vcut|json)$/.test(n)) return openProject(file);
+  if(file.type.startsWith('image/')) return importImage(file);
+  toast('Unknown file type.',true); }
+
+/* ---- point (node) editing ---- */
+let nodeSel=null;
+function nodeHit(o,m){ const cs=objWorld(o), t=7/view.z; let best=null, bd=t; cs.forEach((c,ci)=>c.forEach((p,pi)=>{ const d=Math.hypot(p[0]-m[0],p[1]-m[1]); if(d<bd){ bd=d; best={ci,pi}; } })); return best; }
+function bakeObj(o){ const n=normalize(objWorld(o)); o.x=n.x; o.y=n.y; o.w=n.w; o.h=n.h; o.contours=n.contours; o.rot=0; o.fx=o.fy=false; }
+function makeEditable(o){ if(o.kind==='print'){ toast('Print pictures can\'t be point-edited.',true); return false; } if(o.kind!=='path'&&o.kind!=='svg'){ o.kind='path'; o.params={}; } return true; }
+function nodeSetWorld(o,ci,pi,m){ const l=toLocal(o,m); o.contours[ci][pi]=[l[0]/(o.w*(o.fx?-1:1))+0.5, l[1]/(o.h*(o.fy?-1:1))+0.5]; }
+function nodeInsert(o,m){ const cs=objWorld(o), t=6/view.z; let best=null, bd=t;
+  cs.forEach((c,ci)=>{ for(let i=0;i<c.length;i++){ const a=c[i], b=c[(i+1)%c.length], dx=b[0]-a[0], dy=b[1]-a[1], l=dx*dx+dy*dy; if(!l) continue;
+    const tt=Math.max(0,Math.min(1,((m[0]-a[0])*dx+(m[1]-a[1])*dy)/l)), d=Math.hypot(m[0]-a[0]-tt*dx,m[1]-a[1]-tt*dy); if(d<bd){ bd=d; best={ci,i:i+1,p:[a[0]+tt*dx,a[1]+tt*dy]}; } } });
+  if(!best||!makeEditable(o)) return false; pushUndo(); o.contours[best.ci].splice(best.i,0,[0,0]); nodeSetWorld(o,best.ci,best.i,best.p); bakeObj(o); nodeSel={ci:best.ci,pi:best.i}; changed(); return true; }
+function nodeDelete(){ const o=single(); if(!o||!nodeSel) return; const c=o.contours[nodeSel.ci]; if(!c) return;
+  if(!makeEditable(o)) return; pushUndo(); if(c.length<=3) o.contours.splice(nodeSel.ci,1); else c.splice(nodeSel.pi,1); if(!o.contours.length){ objects=objects.filter(x=>x!==o); sel.clear(); } else bakeObj(o); nodeSel=null; changed(); }
+function drawNodes(px){ const o=single(); if(!o) return; const cs=objWorld(o), s=4*px;
+  ctx.lineWidth=px; cs.forEach((c,ci)=>c.forEach((p,pi)=>{ const on=nodeSel&&nodeSel.ci===ci&&nodeSel.pi===pi; ctx.fillStyle=on?'#2563eb':'#fff'; ctx.strokeStyle='#2563eb'; ctx.fillRect(p[0]-s,p[1]-s,2*s,2*s); ctx.strokeRect(p[0]-s,p[1]-s,2*s,2*s); })); }
+
 /* ======================= job building / output ======================= */
 function marksFor(b){ const m=8, s=5, pts=[[b.x0-m,b.y0-m],[b.x1+m,b.y0-m],[b.x0-m,b.y1+m]], out=[];
   for(const [x,y] of pts){ out.push([[x-s,y],[x+s,y]]); out.push([[x,y-s],[x,y+s]]); } return out; }
@@ -1413,12 +1697,14 @@ function buildJob(colors, extraObjs){
   if(!extraObjs){
     if(settings.weedBox) polys.push([[ref.x0,ref.y0],[ref.x1,ref.y0],[ref.x1,ref.y1],[ref.x0,ref.y1]]);
     if(settings.marks){ for(const mk of marksFor(ref)) polys.push(mk); ref={x0:ref.x0-13,y0:ref.y0-13,x1:ref.x1+13,y1:ref.y1+13}; }
+    if(settings.weedLines) for(const l of weedLinesFor(polys.slice(),ref)) polys.push(l);
     if(settings.mirror) polys=polys.map(c=>c.map(p=>[ref.x0+ref.x1-p[0],p[1]]));
   }
   if(isSide()){ polys=polys.map(c=>c.map(toRoll)); ref=bboxOf([[toRoll([ref.x0,ref.y0]),toRoll([ref.x1,ref.y1])]]); }
   polys=orderPaths(polys,[ref.x0,ref.y0]);
   const oc=+settings.overcut||0, passes=Math.max(1,Math.min(5,Math.round(+settings.passes||1)));
-  const paths=[]; for(const c of polys){ const p=c.length>2?closeWithOvercut(c,oc):c; for(let i=0;i<passes;i++) paths.push(p); }
+  const bo=+settings.bladeOffset||0;
+  const paths=[]; for(const c of polys){ const p=bladeComp(c.length>2?closeWithOvercut(c,oc):c,bo); for(let i=0;i<passes;i++) paths.push(p); }
   return {bbox:ref,paths};
 }
 function closeWithOvercut(c,oc){ const out=c.concat([c[0]]); let need=oc;
@@ -1625,7 +1911,7 @@ $('#cutDlg').addEventListener('close',()=>{ syncSettingsUI(); refreshPropbar(); 
 $('#bCopyQuote').onclick=async()=>{ const t=quoteText(); if(!t) return; try{ await navigator.clipboard.writeText(t); toast('Quote copied – paste it in WhatsApp, email…'); }catch(e){ prompt('Copy this quote:',t); } };
 $('#bText').onclick=addText;
 $('#shapeSel').onchange=e=>{ if(e.target.value) addShape(e.target.value); e.target.value=''; };
-$('#bSvg').onclick=()=>$('#fSvg').click(); $('#fSvg').onchange=e=>{ const f=e.target.files[0]; if(f) importSvg(f); e.target.value=''; };
+$('#bSvg').onclick=()=>$('#fSvg').click(); $('#fSvg').onchange=e=>{ const f=e.target.files[0]; if(f) importAny(f); e.target.value=''; };
 $('#bImg').onclick=()=>$('#fImg').click(); $('#fImg').onchange=e=>{ const f=e.target.files[0]; if(f) importImage(f); e.target.value=''; };
 $('#bOpen').onclick=()=>$('#fProj').click(); $('#fProj').onchange=e=>{ const f=e.target.files[0]; if(f) openProject(f); e.target.value=''; };
 $('#bWeld').onclick=()=>combine('add'); $('#bSub').onclick=()=>combine('sub'); $('#bInt').onclick=()=>combine('int');
@@ -1641,10 +1927,11 @@ $('#bHist').onclick=showHistory; $('#histClose').onclick=()=>$('#histDlg').close
 $('#layerDlgClose').onclick=()=>$('#layerDlg').close();
 $('#bNew').onclick=()=>{ if(objects.length&&!confirm('Start a new empty job?')) return; pushUndo(); objects=[]; sel.clear(); settings.jobName=''; settings.customer=''; settings.qty=1; saveSettings(); syncSettingsUI(); changed(); fit(); };
 $('#bDxf').onclick=exportDXF; $('#bSvgOut').onclick=exportSVG;
-$('#bPC').onclick=openPC; $('#fPrint').onchange=e=>{ const f=e.target.files[0]; if(f) addPrintImage(f); e.target.value=''; };
+$('#bPC').onclick=openPC;
+$('#tlBtnOut').onclick=addOutlineLayer; $('#tlBtnShadow').onclick=addShadowLayer; $('#tlBtnBridge').onclick=stencilBridges; $('#tlBtnNames').onclick=namesList; $('#tlBtnQR').onclick=addQR; $('#tlBtnTile').onclick=tileDesign; $('#tlBtnStones').onclick=rhinestones; $('#fPrint').onchange=e=>{ const f=e.target.files[0]; if(f) addPrintImage(f); e.target.value=''; };
 $('#bConnect').onclick=connect; $('#bCut').onclick=cut; $('#bTest').onclick=testCut; $('#bStop').onclick=()=>{ cancelSend=true; }; $('#bPlt').onclick=savePlt;
 cv.addEventListener('dragover',e=>e.preventDefault());
-cv.addEventListener('drop',e=>{ e.preventDefault(); for(const f of e.dataTransfer.files){ if(/\.svg$/i.test(f.name)) importSvg(f); else if(/\.(vcut|json)$/i.test(f.name)) openProject(f); else if(f.type.startsWith('image/')) importImage(f); } });
+cv.addEventListener('drop',e=>{ e.preventDefault(); for(const f of e.dataTransfer.files) importAny(f); });
 
 (function init(){
   fillFontList(FONTS); syncSettingsUI(); refreshMaterials(); buildLibrary(); $$('#toolbox [data-tool="select"]')[0].classList.add('on');

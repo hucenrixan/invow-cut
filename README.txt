@@ -42,7 +42,23 @@ SHOP
                     Open it, or "Cut again" with one click. Export CSV.
   Job tab ......... job name, customer, mirror, weed box, passes, overcut.
 
+TOOLS tab
+  Outline / Shadow . second-colour layer behind text (choose colour + mm)
+  Stencil bridges .. keeps the middles of O, A, B... attached
+  Names list ....... one text -> many copies (names, or a range like 001-050)
+  QR code .......... type a web address -> cut-ready QR (scan with phone first!)
+  Tiling ........... splits a sign bigger than the vinyl into overlapping panels
+  Rhinestones ...... stone holes along the outline and/or filling the shape
+  Points tool (N) .. drag points; double-click a line to add; Delete removes
+  Import ........... SVG, DXF and PLT/HPGL. PDF/AI/EPS: save as SVG or DXF first.
+
+CUTTER SETTINGS (gear button)
+  Safety limits (max width/length), cutting-area view, blade offset
+  (sharper corners, try 0.25 mm), weeding lines, size calibration.
+  Print & Cut: print with crosses, put cross 1 under the blade, Origin, cut.
+
 SAVE / OPEN projects as .vcut files. Work is also auto-saved.
+Every version is saved in git (folder .git) - ask Claude to go back if needed.
 
 SILHOUETTE CAMEO 4
   Job tab > Export DXF (Cameo). Open the .dxf in Silhouette Studio (free Basic edition)
