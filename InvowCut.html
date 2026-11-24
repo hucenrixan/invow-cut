@@ -289,6 +289,7 @@ h3{color:#6b7280}
       <h3>Silhouette Cameo / other machines</h3>
       <p class="hint">Export the design and open it in Silhouette Studio to cut on the Cameo 4. DXF opens in the free Basic edition; SVG needs a paid edition (Designer or higher).</p>
       <div class="btnrow"><button id="bDxf" class="primary">Export DXF (Cameo)</button><button id="bSvgOut">Export SVG</button></div>
+      <div class="btnrow"><button id="bSil" class="primary" title="Picture (PNG 300 dpi) + cut line (DXF), same size – for Print &amp; Cut on the Cameo 4">Export for Silhouette (print + cut)</button></div>
     </div>
 
     <div class="tabpane" id="t-price">
@@ -518,7 +519,7 @@ h3{color:#6b7280}
       <p class="hint">Passes, overcut and force come from ⚙ Cutter settings. Try on plain paper first.</p>
     </section>
   </div>
-  <div class="cd-foot"><span class="hint" style="margin:0">Cameo 4 print &amp; cut will be added later.</span><span style="flex:1"></span><button class="primary" onclick="$('#pcDlg').close()">Done</button></div>
+  <div class="cd-foot"><button onclick="exportSilhouette()" title="Picture + cut line for Silhouette Studio – the Cameo 4 reads the marks automatically">Export for Silhouette (Cameo 4)</button><span style="flex:1"></span><button class="primary" onclick="$('#pcDlg').close()">Done</button></div>
 </dialog>
 <input type="file" id="fProj" accept=".vcut,.json" hidden>
 <datalist id="fontList"></datalist>
@@ -1968,6 +1969,40 @@ function exportDXF(){ const g=exportGeometry(); if(!g) return; const {groups,b}=
   push(0,'ENDSEC',0,'EOF');
   download(new Blob([L.join('\r\n')+'\r\n'],{type:'application/dxf'}),exportName('dxf'));
   toast(`DXF saved (${r2(b.x1-b.x0)} × ${r2(b.y1-b.y0)} mm). In Silhouette Studio use File > Open, then check the size.`); }
+/* ---------- Export for Silhouette: print picture (PNG 300 dpi) + cut line (DXF), same size so they line up ---------- */
+const CRC_T=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC_T[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function pngWithDpi(buf,dpi){ // insert a pHYs chunk so other programs read the real size
+  const src=new Uint8Array(buf), ppm=Math.round(dpi/0.0254), ch=new Uint8Array(21), dv=new DataView(ch.buffer);
+  dv.setUint32(0,9); ch.set([112,72,89,115],4); dv.setUint32(8,ppm); dv.setUint32(12,ppm); ch[16]=1; dv.setUint32(17,crc32(ch.subarray(4,17)));
+  const at=8+25, out=new Uint8Array(src.length+21); out.set(src.subarray(0,at)); out.set(ch,at); out.set(src.subarray(at),at+21); return out; }
+async function exportSilhouette(){ const shown=objects.filter(o=>vis(o)); if(!shown.length){ toast('Add a design first.',true); return; }
+  const cuts=[]; for(const o of shown) for(const c of objWorld(o)) if(c.length>1) cuts.push(c);
+  const printed=shown.filter(o=>o.kind==='print'||settings.pcPrintAll);
+  if(!cuts.length&&!printed.length){ toast('Nothing to export.',true); return; }
+  const parts=[]; if(cuts.length) parts.push(bboxOf(cuts)); for(const o of printed) parts.push(objBBox(o));
+  const B={x0:Math.min(...parts.map(b=>b.x0)),y0:Math.min(...parts.map(b=>b.y0)),x1:Math.max(...parts.map(b=>b.x1)),y1:Math.max(...parts.map(b=>b.y1))};
+  const W=B.x1-B.x0, H=B.y1-B.y0, size=`${W.toFixed(1)}x${H.toFixed(1)}mm`, base=exportName('x').replace(/\.x$/,'')+'_silhouette';
+  const cb=cuts.length?bboxOf(cuts):null, same=cb&&Math.abs(cb.x0-B.x0)<0.05&&Math.abs(cb.y0-B.y0)<0.05&&Math.abs(cb.x1-B.x1)<0.05&&Math.abs(cb.y1-B.y1)<0.05;
+  await busy(async()=>{
+    if(printed.length){ const f=v=>(+v).toFixed(3); let body='';
+      for(const o of printed){ if(o.kind==='print'){ const ib=o.params.ib||[0,0,1,1];
+          body+=`<g transform="translate(${f(o.x+o.w/2-B.x0)} ${f(o.y+o.h/2-B.y0)}) rotate(${f(o.rot)}) scale(${o.fx?-1:1} ${o.fy?-1:1})"><image href="${o.params.src}" x="${f((ib[0]-.5)*o.w)}" y="${f((ib[1]-.5)*o.h)}" width="${f((ib[2]-ib[0])*o.w)}" height="${f((ib[3]-ib[1])*o.h)}" preserveAspectRatio="none"/></g>`; }
+        else body+=`<path fill="${o.color}" fill-rule="evenodd" d="${objWorld(o).map(c=>'M'+c.map(p=>f(p[0]-B.x0)+' '+f(p[1]-B.y0)).join('L')+'Z').join('')}"/>`; }
+      const ppm=300/25.4, pw=Math.max(1,Math.round(W*ppm)), ph=Math.max(1,Math.round(H*ppm));
+      if(pw*ph>60e6){ toast('Design too big for a 300 dpi picture – make it smaller.',true); return; }
+      const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${pw}" height="${ph}" viewBox="0 0 ${f(W)} ${f(H)}">${body}</svg>`;
+      const im=await loadImage('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)), c=document.createElement('canvas'); c.width=pw; c.height=ph;
+      c.getContext('2d').drawImage(im,0,0,pw,ph); const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+      download(new Blob([pngWithDpi(await blob.arrayBuffer(),300)],{type:'image/png'}),`${base}_PRINT_${size}.png`); }
+    if(cuts.length){ const L=[], f=v=>(+v).toFixed(4), push=(...a)=>{ for(let i=0;i<a.length;i+=2) L.push(String(a[i]),String(a[i+1])); };
+      push(0,'SECTION',2,'HEADER',9,'$ACADVER',1,'AC1009',9,'$INSUNITS',70,4,9,'$MEASUREMENT',70,1,0,'ENDSEC',0,'SECTION',2,'ENTITIES');
+      for(const c of cuts){ push(0,'POLYLINE',8,'CUT',66,1,70,c.length>2?1:0); for(const p of c) push(0,'VERTEX',8,'CUT',10,f(p[0]-B.x0),20,f(B.y1-p[1]),30,'0.0'); push(0,'SEQEND',8,'CUT'); }
+      push(0,'ENDSEC',0,'EOF'); await new Promise(r=>setTimeout(r,400));
+      download(new Blob([L.join('\r\n')+'\r\n'],{type:'application/dxf'}),`${base}_CUT_${size}.dxf`); } });
+  const warn=printed.length&&cuts.length&&!same?'\n\n⚠ The picture is bigger than the cut line. Line them up by eye, or give the picture a cut line around it (Object tab → Cut line).':'';
+  alert(`Saved for Silhouette Studio (${W.toFixed(1)} × ${H.toFixed(1)} mm):\n`+(printed.length?`• ${base}_PRINT_${size}.png – picture to print\n`:'')+(cuts.length?`• ${base}_CUT_${size}.dxf – cut line\n`:'')+
+    `\nIn Silhouette Studio (free Basic edition):\n1. Page Setup: choose your paper, Registration Marks ON.\n2. File › Merge… the PNG, then File › Merge… the DXF.\n3. Check both are ${W.toFixed(1)} × ${H.toFixed(1)} mm (Transform panel). Select both › Align › Center.\n4. Select the picture › Send panel: set it to NO cut. The DXF line = cut.\n5. Print (with marks), put the sheet on the mat, load it, Send.\nThe Cameo 4 finds the marks by itself.`+warn); }
 function download(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
 
 /* ======================= project files ======================= */
@@ -2017,7 +2052,7 @@ $('#bUndo').onclick=undo; $('#bRedo').onclick=redo; $('#bFit').onclick=fit;
 $('#bHist').onclick=showHistory; $('#histClose').onclick=()=>$('#histDlg').close(); $('#histSearch').oninput=renderHistory; $('#histCsv').onclick=exportCsv;
 $('#layerDlgClose').onclick=()=>$('#layerDlg').close();
 $('#bNew').onclick=()=>{ if(objects.length&&!confirm('Start a new empty job?')) return; pushUndo(); objects=[]; sel.clear(); settings.jobName=''; settings.customer=''; settings.qty=1; saveSettings(); syncSettingsUI(); changed(); fit(); };
-$('#bDxf').onclick=exportDXF; $('#bSvgOut').onclick=exportSVG;
+$('#bDxf').onclick=exportDXF; $('#bSil').onclick=exportSilhouette; $('#bSvgOut').onclick=exportSVG;
 $('#bPC').onclick=openPC;
 $('#tlBtnOut').onclick=addOutlineLayer; $('#tlBtnShadow').onclick=addShadowLayer; $('#tlBtnBridge').onclick=stencilBridges; $('#tlBtnNames').onclick=namesList; $('#tlBtnQR').onclick=addQR; $('#tlBtnTile').onclick=tileDesign; $('#tlBtnStones').onclick=rhinestones; $('#fPrint').onchange=e=>{ const f=e.target.files[0]; if(f) addPrintImage(f); e.target.value=''; };
 $('#bConnect').onclick=connect; $('#bCut').onclick=cut; $('#bTest').onclick=testCut; $('#bStop').onclick=()=>{ cancelSend=true; }; $('#bPlt').onclick=savePlt;
