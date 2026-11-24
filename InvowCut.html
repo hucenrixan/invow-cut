@@ -215,10 +215,18 @@ h3{color:#6b7280}
 </header>
 <div id="movePad" style="display:none;position:fixed;right:14px;top:96px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.18);width:190px;user-select:none">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>Move design</b><button id="mpClose" style="padding:1px 7px">✕</button></div>
-  <div style="display:grid;grid-template-columns:repeat(3,44px);grid-auto-rows:40px;gap:4px;justify-content:center">
-    <span></span><button data-mv="0,-1" title="Up">▲</button><span></span>
-    <button data-mv="-1,0" title="Left">◀</button><button id="mpShow" title="Blade up: trace the design box">◎</button><button data-mv="1,0" title="Right">▶</button>
-    <span></span><button data-mv="0,1" title="Down">▼</button><span></span>
+  <style>
+    #wheel{position:relative;width:150px;height:150px;margin:2px auto;border-radius:50%;background:#eef0f4;border:1px solid var(--line);overflow:hidden}
+    #wheel [data-mv]{position:absolute;width:50px;height:46px;padding:0;border:0;background:transparent;font-size:18px;border-radius:8px}
+    #wheel [data-mv]:hover{background:#dbe4fb}
+    #wheel [data-mv="0,-1"]{left:50px;top:4px} #wheel [data-mv="0,1"]{left:50px;bottom:4px}
+    #wheel [data-mv="-1,0"]{left:4px;top:52px} #wheel [data-mv="1,0"]{right:4px;top:52px}
+    #mpCenter{position:absolute;left:49px;top:49px;width:52px;height:52px;border-radius:50%;padding:0;font-size:18px;background:#fff;border:1px solid var(--line)}
+  </style>
+  <div id="wheel">
+    <button data-mv="0,-1" title="Up">▲</button>
+    <button data-mv="-1,0" title="Left">◀</button><button id="mpCenter" title="Click: blade-up trace of the design box.  Double-click: back to default position">◎</button><button data-mv="1,0" title="Right">▶</button>
+    <button data-mv="0,1" title="Down">▼</button>
   </div>
   <label style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">Step <select id="mpStep"><option>0.5</option><option>1</option><option selected>5</option><option>10</option><option>50</option></select> mm</label>
   <label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="mpAuto"> Move blade after each press</label>
@@ -2208,9 +2216,17 @@ $('#tlBtnOut').onclick=addOutlineLayer; $('#tlBtnShadow').onclick=addShadowLayer
 $('#bConnect').onclick=connect; $('#bCut').onclick=cut; $('#bTest').onclick=testCut; $('#bShow').onclick=showPosition;
 $('#bMove').onclick=()=>{ const p=$('#movePad'); p.style.display=p.style.display==='none'?'block':'none'; };
 $('#mpClose').onclick=()=>{ $('#movePad').style.display='none'; };
-$('#mpShow').onclick=showPosition;
+/* wheel: remember where each object was before the first move, so double-click on the centre brings it back */
+let mpHome=null, mpTimer=null;
+$('#bMove').addEventListener('click',()=>{ mpHome=null; });
+$('#mpCenter').onclick=()=>{ clearTimeout(mpTimer); mpTimer=setTimeout(showPosition,280); };
+$('#mpCenter').ondblclick=()=>{ clearTimeout(mpTimer);
+  if(!mpHome){ toast('Already at the default position.'); return; }
+  pushUndo(); let n=0; for(const o of objects){ const h=mpHome[o.id]; if(h){ o.x=h[0]; o.y=h[1]; n++; } } mpHome=null; changed(); toast('Back to the default position ('+n+' object'+(n===1?'':'s')+').'); };
+$('#mpStep').ondblclick=()=>{ $('#mpStep').value='5'; toast('Step reset to 5 mm.'); };
 $$('#movePad [data-mv]').forEach(b=>b.onclick=async()=>{ const [dx,dy]=b.dataset.mv.split(',').map(Number), st=parseFloat($('#mpStep').value)||5;
   const list=sel.size?selected():objects.filter(o=>vis(o)); const mv=list.filter(o=>!o.lock); if(!mv.length){ toast('Nothing to move.',true); return; }
+  if(!mpHome){ mpHome={}; for(const o of objects) mpHome[o.id]=[o.x,o.y]; }
   pushUndo(); for(const o of mv){ o.x+=dx*st; o.y+=dy*st; } changed();
   if($('#mpAuto').checked&&!sending) await showPosition(); }); $('#bStop').onclick=()=>{ cancelSend=true; }; $('#bPlt').onclick=savePlt;
 cv.addEventListener('dragover',e=>e.preventDefault());
