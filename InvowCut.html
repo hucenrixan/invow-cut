@@ -152,6 +152,11 @@ header button.danger{color:#fca5a5}
 #toolbox button.on svg{stroke:#fff}
 #toolbox .tsep{background:#3a4150}
 #toolbox .tg{position:relative}
+.fontbar{display:flex;gap:6px;margin-bottom:6px}.fontbar select{flex:1}.fontbar input{flex:1;min-width:0}
+.fontgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;max-height:340px;overflow:auto;margin:6px 0}
+.fontgrid button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px;text-align:left;min-width:0}
+.fontgrid .fs{font-size:22px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.fontgrid small{font-size:10px;color:#6b7280}.fontgrid .fdel{position:absolute;top:2px;right:5px;font-style:normal;color:#9ca3af;cursor:pointer}.fontgrid .fdel:hover{color:#dc2626}
 #toolbox .tg .tarr{position:absolute;right:-3px;bottom:-1px;width:14px;height:14px;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:flex-end;justify-content:flex-end}
 #toolbox .tg .tarr::after{content:"";border-style:solid;border-width:0 0 7px 7px;border-color:transparent transparent #9ca3af transparent}
 #toolbox .tg .tarr:hover::after{border-bottom-color:#fff}
@@ -245,6 +250,12 @@ h3{color:#6b7280}
     </div>
 
     <div class="tabpane" id="t-lib">
+      <h3 id="fontLibH">Fonts</h3>
+      <div class="fontbar"><select id="fontCat"></select><input type="search" id="fontSearch" placeholder="Search fonts…"></div>
+      <input type="text" class="full" id="fontSample" placeholder="Preview text (type your words)">
+      <div class="fontgrid" id="fontGrid"></div>
+      <div class="btnrow"><button id="bAddFont">＋ Add font file (.ttf / .otf)</button></div>
+      <p class="hint">Click a font: changes the selected text, or adds new text. Web fonts need internet the first time. Fonts on your computer: Object tab → Show all my fonts.</p>
       <h3>Templates – vinyl roll width (this cutter)</h3><div class="tplgrid" id="tplRolls"></div>
       <h3>Templates – paper &amp; sheets</h3><div class="tplgrid" id="tplSheets"></div>
       <h3>Templates – common sign &amp; sticker sizes</h3><div class="tplgrid" id="tplSigns"></div>
@@ -481,6 +492,7 @@ h3{color:#6b7280}
 
 <div class="ctxmenu" id="ctx"></div>
 <div id="toast"></div>
+<input type="file" id="fFont" accept=".ttf,.otf,.woff,.woff2" multiple hidden>
 <input type="file" id="fSvg" accept=".svg,image/svg+xml,.dxf,.plt,.hpgl,.hpg,.plo,.pdf,.ai,.eps" hidden>
 <input type="file" id="fImg" accept="image/*" hidden>
 <input type="file" id="fPrint" accept="image/png,image/jpeg,image/webp" hidden>
@@ -653,7 +665,7 @@ function offsetField(R,dmm){ const n=R.W*R.H, dpx=Math.abs(dmm)*R.ppm, INF=1e20,
 /* ======================= generators ======================= */
 async function textContours(p){
   const fontPx=240, style=`${p.italic?'italic ':''}${p.bold?'bold ':''}${fontPx}px "${p.font}"`;
-  try{ await document.fonts.load(style,p.text||'A'); }catch(e){}
+  await loadWebFont(p.font); try{ await document.fonts.load(style,p.text||'A'); }catch(e){}
   const setup=c=>{ c.font=style; c.textBaseline='alphabetic'; c.fillStyle='#000'; c.letterSpacing='0px'; };
   const m=document.createElement('canvas').getContext('2d'); setup(m);
   const sp=(p.spacing||0)/100*fontPx, curve=+p.curve||0;
@@ -1102,7 +1114,7 @@ function refreshPanel(){
   if(o.kind==='text'){
     h+=`<h3>Text</h3><textarea data-p="text">${escapeHtml(p.text)}</textarea>
       <label class="row"><span>Font</span><input type="text" list="fontList" data-p="font" value="${escapeHtml(p.font)}"></label>
-      <div class="btnrow"><button id="bFonts">Show all my fonts</button></div>
+      <div class="btnrow"><button id="bFonts">Show all my fonts</button><button onclick="showTab('lib');document.getElementById('fontLibH').scrollIntoView()">Font library…</button></div>
       <label class="row"><span>Bold</span><input type="checkbox" data-p="bold" ${p.bold?'checked':''}></label>
       <label class="row"><span>Italic</span><input type="checkbox" data-p="italic" ${p.italic?'checked':''}></label>
       <label class="row"><span>Letter spacing (%)</span><input type="number" step="1" data-p="spacing" value="${p.spacing||0}"></label>
@@ -1289,7 +1301,7 @@ function setGuide(name,w,h){ const m=(+settings.margin||0)+5; settings.guide={na
 function drawGuide(px){ const g=settings.guide; if(!g) return;
   ctx.fillStyle='rgba(37,99,235,.05)'; ctx.fillRect(g.x,g.y,g.w,g.h); ctx.strokeStyle='#2563eb'; ctx.lineWidth=1.4*px; ctx.setLineDash([7*px,4*px]); ctx.strokeRect(g.x,g.y,g.w,g.h); ctx.setLineDash([]);
   ctx.fillStyle='#1d4ed8'; ctx.font=`600 ${11*px}px Segoe UI`; ctx.fillText(`${g.name} ${r2(g.w)} × ${r2(g.h)} mm (guide – not cut)`,g.x+3*px,g.y+g.h+13*px); }
-function buildLibrary(){ buildTemplates();
+function buildLibrary(){ buildTemplates(); buildFontLib();
   $('#libShapes').innerHTML=Object.keys(SHAPE_NAMES).map(k=>`<button data-ls="${k}" title="${SHAPE_NAMES[k]}">${shapeIcon(k)}<span>${SHAPE_NAMES[k]}</span></button>`).join('');
   $('#libWords').innerHTML=WORDS.map(w=>`<button data-lw="${w}"><span class="lt">${w}</span></button>`).join('');
   $('#libReady').innerHTML=Object.entries(READY).map(([k,n])=>`<button data-lr="${k}">${n}</button>`).join('');
@@ -1332,7 +1344,48 @@ function align(mode){ const list=selected(); if(list.length<2) return; pushUndo(
   changed(); }
 function fillFontList(list){ $('#fontList').innerHTML=[...new Set(list)].sort().map(f=>`<option value="${escapeHtml(f)}">`).join(''); }
 async function loadAllFonts(){ if(!window.queryLocalFonts){ toast('This browser cannot list fonts – type the font name.',true); return; }
-  try{ const fs=await queryLocalFonts(); fillFontList(FONTS.concat(fs.map(f=>f.family))); toast(new Set(fs.map(f=>f.family)).size+' fonts now in the Font list'); }catch(e){ toast('Font permission was not given.',true); } }
+  try{ const fs=await queryLocalFonts(); refreshFontList(fs.map(f=>f.family)); toast(new Set(fs.map(f=>f.family)).size+' fonts now in the Font list'); }catch(e){ toast('Font permission was not given.',true); } }
+
+/* ======================= font library: free web fonts (Google Fonts, loaded when used) + your own font files ======================= */
+const WEB_FONTS={
+  'Sign & bold':['Anton','Bebas Neue','Oswald','Archivo Black','Alfa Slab One','Russo One','Teko','Passion One','Fjalla One','Staatliches','Bungee','Black Ops One','Righteous','Lilita One','Bowlby One SC','Ultra','Titan One','Squada One','Big Shoulders Display','Saira Condensed'],
+  'Clean & modern':['Montserrat','Poppins','Roboto','Open Sans','Lato','Raleway','Nunito','Rubik','Barlow','Kanit','Work Sans','Josefin Sans','Quicksand','Comfortaa','Exo 2','Archivo','Inter','Manrope','Ubuntu','Fredoka'],
+  'Script & handwriting':['Pacifico','Lobster','Dancing Script','Great Vibes','Satisfy','Kaushan Script','Sacramento','Allura','Parisienne','Yellowtail','Cookie','Courgette','Caveat','Permanent Marker','Shadows Into Light','Amatic SC','Indie Flower','Alex Brush','Pinyon Script','Tangerine','Damion','Mr Dafoe','Marck Script','Norican','Leckerli One'],
+  'Fun & display':['Bangers','Luckiest Guy','Chewy','Creepster','Press Start 2P','Orbitron','Audiowide','Rye','Sancreek','Abril Fatface','Cinzel Decorative','Bungee Inline','Special Elite','Fascinate','Ewert','Henny Penny','Graduate','Holtwood One SC','Carter One','Sigmar One'],
+  'Serif & classic':['Playfair Display','Merriweather','Lora','Roboto Slab','Bitter','Cinzel','EB Garamond','Libre Baskerville','Cormorant Garamond','Crimson Text','Arvo','Zilla Slab','DM Serif Display','Old Standard TT','Spectral'],
+  'Stencil':['Stardos Stencil','Allerta Stencil','Saira Stencil One','Big Shoulders Stencil Display','Emblema One'],
+  'Arabic & Dhivehi':['Noto Sans Thaana','Amiri','Cairo','Tajawal','Noto Kufi Arabic','Reem Kufi','Lateef','Changa','El Messiri','Lalezar','Aref Ruqaa']};
+const WEB_FONT_SET=new Set(Object.values(WEB_FONTS).flat());
+const LOCAL_EXTRA=['MV Boli','Faruma','A_Faruma','Arial Unicode MS','Traditional Arabic','Simplified Arabic','Arabic Typesetting','Sakkal Majalla'];
+const fontLoads=new Map(); let userFonts=[];
+function loadWebFont(name){ if(!WEB_FONT_SET.has(name)) return Promise.resolve(false); if(fontLoads.has(name)) return fontLoads.get(name);
+  const pr=new Promise(res=>{ const l=document.createElement('link'); l.rel='stylesheet'; l.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(name).replace(/%20/g,'+')+'&display=block';
+    l.onload=async()=>{ try{ await document.fonts.load(`40px "${name}"`); }catch(e){} res(true); }; l.onerror=()=>{ fontLoads.delete(name); res(false); }; document.head.appendChild(l); });
+  fontLoads.set(name,pr); return pr; }
+const FontDB={ db:null, async open(){ if(this.db) return this.db; this.db=await new Promise((res,rej)=>{ const r=indexedDB.open('invowcut-fonts',1); r.onupgradeneeded=()=>r.result.createObjectStore('fonts',{keyPath:'name'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); return this.db; },
+  async run(mode,fn){ const db=await this.open(); return new Promise((res,rej)=>{ const t=db.transaction('fonts',mode), r=fn(t.objectStore('fonts')); t.oncomplete=()=>res(r&&r.result); t.onerror=()=>rej(t.error); }); },
+  put(x){ return this.run('readwrite',s=>s.put(x)); }, all(){ return this.run('readonly',s=>s.getAll()); }, del(n){ return this.run('readwrite',s=>s.delete(n)); } };
+async function loadUserFonts(){ try{ const list=await FontDB.all(); for(const f of list){ try{ const ff=new FontFace(f.name,f.data); await ff.load(); document.fonts.add(ff); }catch(e){} } userFonts=list.map(f=>f.name); refreshFontList(); buildFontLib(); }catch(e){} }
+async function addFontFiles(files){ let n=0;
+  for(const file of files){ if(!/\.(ttf|otf|woff2?)$/i.test(file.name)){ toast(file.name+': use a .ttf, .otf or .woff font file.',true); continue; }
+    const data=await file.arrayBuffer(), name=file.name.replace(/\.(ttf|otf|woff2?)$/i,'').replace(/[_-]+/g,' ').trim();
+    try{ const ff=new FontFace(name,data); await ff.load(); document.fonts.add(ff); await FontDB.put({name,data}); if(!userFonts.includes(name)) userFonts.push(name); n++; }catch(e){ toast(file.name+': this font file could not be read.',true); } }
+  if(n){ refreshFontList(); buildFontLib('My fonts'); toast(n+' font(s) added – they stay in Invow Cut on this computer.'); } }
+async function removeUserFont(name){ if(!confirm('Remove the font "'+name+'" from Invow Cut?')) return; await FontDB.del(name); userFonts=userFonts.filter(f=>f!==name); refreshFontList(); buildFontLib('My fonts'); }
+function refreshFontList(extra){ fillFontList(FONTS.concat(LOCAL_EXTRA,[...WEB_FONT_SET],userFonts,extra||[])); }
+async function useFont(name){ await loadWebFont(name); const list=selected().filter(o=>o.kind==='text');
+  if(list.length){ pushUndo(); for(const o of list){ o.params.font=name; await regen(o); } settings.lastFont=name; saveSettings(); changed(); refreshPanel(); toast('Font: '+name); return; }
+  settings.lastFont=name; saveSettings(); pushUndo(); const o=newObj('text',{h:30,params:{text:'Your text',font:name,bold:false,italic:false,spacing:0,lineHeight:1.2,align:'center',curve:0}});
+  await regen(o); placeNew(o); showTab('obj'); changed(); toast('Text added in '+name+'. Type your words in the Object tab.'); }
+function buildFontLib(cat){ const sel=$('#fontCat'), grid=$('#fontGrid'); if(!sel||!grid) return;
+  const cats=Object.keys(WEB_FONTS).concat(['My fonts']); if(!sel.options.length) sel.innerHTML=cats.map(c=>`<option>${c}</option>`).join('');
+  if(cat) sel.value=cat; const c=sel.value, q=($('#fontSearch').value||'').trim().toLowerCase(), sample=($('#fontSample').value||'').trim();
+  let names=q?[...WEB_FONT_SET,...userFonts].filter(n=>n.toLowerCase().includes(q)):(c==='My fonts'?userFonts:WEB_FONTS[c]||[]);
+  if(!names.length){ grid.innerHTML=`<p class="hint">${c==='My fonts'&&!q?'No fonts added yet. Click <b>Add font file</b> to add .ttf / .otf fonts (for example from dafont.com or a font you bought).':'No fonts found.'}</p>`; return; }
+  const isAr=c==='Arabic & Dhivehi';
+  grid.innerHTML=names.map(n=>`<button data-font="${escapeHtml(n)}" title="${escapeHtml(n)}"><span class="fs" style="font-family:'${n.replace(/'/g,"\\'")}'">${escapeHtml(sample||(isAr?(n==='Noto Sans Thaana'?'ދިވެހި Abc':'عربي Abc'):'Abc 123'))}</span><small>${escapeHtml(n)}</small>${userFonts.includes(n)&&!WEB_FONT_SET.has(n)?`<i class="fdel" data-fdel="${escapeHtml(n)}" title="Remove">✕</i>`:''}</button>`).join('');
+  names.forEach(n=>loadWebFont(n));
+  grid.querySelectorAll('[data-font]').forEach(b=>b.onclick=e=>{ const d=e.target.closest('[data-fdel]'); if(d){ e.stopPropagation(); removeUserFont(d.dataset.fdel); return; } useFont(b.dataset.font); }); }
 
 /* ======================= design actions ======================= */
 async function addText(){ pushUndo(); const o=newObj('text',{h:30,params:{text:'Your text',font:'Arial',bold:true,italic:false,spacing:0,lineHeight:1.2,align:'center',curve:0}});
@@ -1791,6 +1844,7 @@ async function importCutFile(file){ const name=file.name.toLowerCase(), text=awa
   toast(`Opened ${file.name}: ${r2(o.w)} × ${r2(o.h)} mm, ${cs.length} line(s).`); }
 function importAny(file){ const n=file.name.toLowerCase();
   if(/\.svg$/.test(n)) return importSvg(file);
+  if(/\.(ttf|otf|woff2?)$/.test(n)) return addFontFiles([file]);
   if(/\.(dxf|plt|hpgl|hpg|plo)$/.test(n)) return importCutFile(file);
   if(/\.(pdf|ai|eps|cdr)$/.test(n)){ toast('PDF / AI / EPS / CDR can\'t be opened directly. In the program that made it (or free Inkscape), save it as SVG or DXF, then open that.',true); return; }
   if(/\.(vcut|json)$/.test(n)) return openProject(file);
@@ -2117,6 +2171,8 @@ $('#bUndo').onclick=undo; $('#bRedo').onclick=redo; $('#bFit').onclick=fit;
 $('#bHist').onclick=showHistory; $('#histClose').onclick=()=>$('#histDlg').close(); $('#histSearch').oninput=renderHistory; $('#histCsv').onclick=exportCsv;
 $('#layerDlgClose').onclick=()=>$('#layerDlg').close();
 $('#bNew').onclick=()=>{ if(objects.length&&!confirm('Start a new empty job?')) return; pushUndo(); objects=[]; sel.clear(); settings.jobName=''; settings.customer=''; settings.qty=1; saveSettings(); syncSettingsUI(); changed(); fit(); };
+$('#fontCat').onchange=()=>buildFontLib(); $('#fontSearch').oninput=()=>buildFontLib(); $('#fontSample').oninput=()=>{ clearTimeout(window._fst); window._fst=setTimeout(()=>buildFontLib(),250); };
+$('#bAddFont').onclick=()=>$('#fFont').click(); $('#fFont').onchange=e=>{ addFontFiles([...e.target.files]); e.target.value=''; };
 $('#bDxf').onclick=exportDXF; $('#bSil').onclick=exportSilhouette; $('#bSvgOut').onclick=exportSVG;
 $('#bPC').onclick=openPC;
 $('#tlBtnOut').onclick=addOutlineLayer; $('#tlBtnShadow').onclick=addShadowLayer; $('#tlBtnBridge').onclick=stencilBridges; $('#tlBtnNames').onclick=namesList; $('#tlBtnQR').onclick=addQR; $('#tlBtnTile').onclick=tileDesign; $('#tlBtnStones').onclick=rhinestones; $('#fPrint').onchange=e=>{ const f=e.target.files[0]; if(f) addPrintImage(f); e.target.value=''; };
@@ -2125,7 +2181,7 @@ cv.addEventListener('dragover',e=>e.preventDefault());
 cv.addEventListener('drop',e=>{ e.preventDefault(); for(const f of e.dataTransfer.files) importAny(f); });
 
 (function init(){
-  fillFontList(FONTS); syncSettingsUI(); refreshProfileUI(); refreshMaterials(); buildLibrary(); $$('#toolbox [data-tool="select"]')[0].classList.add('on');
+  refreshFontList(); loadUserFonts(); syncSettingsUI(); refreshProfileUI(); refreshMaterials(); buildLibrary(); $$('#toolbox [data-tool="select"]')[0].classList.add('on');
   const saved=safeJSON(localStorage.getItem('ic_project'))||safeJSON(localStorage.getItem('vc_project'));
   if(saved&&Array.isArray(saved.objects)){ objects=saved.objects.map(o=>Object.assign({color:'#111111'},o)); nextId=saved.nextId||1; }
   changed(); fit();

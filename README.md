@@ -22,6 +22,7 @@ The plotter must show up as a **serial (COM) port**. USB-only craft cutters (Sil
 
 ### Design
 - **Text** in any font installed on your computer, including **text on a curve or full circle**
+- **Font library:** 116 free web fonts (sign, script, display, serif, stencil, Arabic and Dhivehi/Thaana) with live previews, plus **your own .ttf / .otf font files** (saved in the app)
 - **Shapes:** rectangle, square, rounded rectangle, circle, ellipse, triangle, star, hexagon, diamond, heart, arrow, plus, banner, speech bubble, frame, ring, badge
 - **Pen tool**, **Points tool** (move, add or delete points) and **Knife tool** (slice a shape in two)
 - **Weld, Subtract, Intersect, Break apart**
