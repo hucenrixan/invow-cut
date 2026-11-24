@@ -444,7 +444,9 @@ h3{color:#6b7280}
     <section class="cd-card cd-safe">
       <h4>5 · Safety limits</h4>
       <div class="cd-safegrid">
-        <label class="row"><span>Max cutting width (mm)</span><input type="number" step="1" min="50" max="2000" data-s="safeMaxWidth"></label>
+        <label class="row"><span>Machine width – left end to right end (mm)</span><input type="number" step="1" min="50" max="2000" data-s="safeMaxWidth"></label>
+        <label class="row"><span>Blade (Origin) is this far from the left end (mm)</span><input type="number" step="1" min="0" max="1900" data-s="originFromLeft"></label>
+        <div class="row"><span><b>Room for cutting from Origin</b></span><b id="cdRoom">–</b></div>
         <label class="row"><span>Max cutting length (mm)</span><input type="number" step="10" min="50" max="50000" data-s="safeMaxLength"></label>
         <label class="row"><span>Ask before every cut</span><input type="checkbox" data-s="safeConfirm"></label>
         <label class="row"><span>Show cutting area</span><input type="checkbox" data-s="areaOn"></label>
@@ -529,10 +531,10 @@ const DEFAULTS = {
   nestGap:3, nestRotate:true, jobName:'', customer:'',
   currency:'', pricePerM:10, chargeUsedWidth:false, cutPerM:1, weedPerPiece:0.05, setupFee:2, markup:30, qty:1,
   hiddenLayers:[], material:0, curColor:'#111111',
-  safeMaxWidth:600, safeMaxLength:3000, safeConfirm:true, showArea:false, areaOn:true, testF:false, sideView:false, guide:null, bladeOffset:0, weedLines:false,
+  safeMaxWidth:600, originFromLeft:0, safeMaxLength:3000, safeConfirm:true, showArea:false, areaOn:true, testF:false, sideView:false, guide:null, bladeOffset:0, weedLines:false,
   pcShow:false, pcPage:'A4', pcOrient:'portrait', pcInset:12, pcPrintAll:true
 };
-const MACHINE_KEYS=['vinylWidth','unitsX','unitsY','swapXY','flipAcross','flipFeed','margin','baud','flow','header','footer','safeMaxWidth','safeMaxLength'];
+const MACHINE_KEYS=['vinylWidth','unitsX','unitsY','swapXY','flipAcross','flipFeed','margin','baud','flow','header','footer','safeMaxWidth','originFromLeft','safeMaxLength'];
 const DEFAULT_MATERIALS=[
   {name:'Standard sign vinyl', speed:300, force:80, passes:1, overcut:0.5, mirror:false},
   {name:'Heat transfer vinyl (HTV)', speed:250, force:70, passes:1, overcut:0.5, mirror:true},
@@ -789,7 +791,13 @@ const fromRight=()=>false; // user prefers the ruler 0 on the left (2026-11-23)
 const toRoll=p=>isSide()?[settings.vinylWidth-p[1],p[0]]:p;
 const fromRoll=p=>isSide()?[p[1],settings.vinylWidth-p[0]]:p;
 // which way the cut area runs from the start corner on screen, and the screen size limits along x / y
-function areaDirs(){ const W=+settings.safeMaxWidth||600, L=+settings.safeMaxLength||3000;
+const safeW=()=>Math.max(20,(+settings.safeMaxWidth||600)-(+settings.originFromLeft||0)); // room from the blade (Origin) to the right end
+function originText(){ return 'Origin '+(+settings.originFromLeft||0)+' mm from left · '+safeW()+' mm room'; }
+function askOrigin(){ const v=prompt('Where is the blade when you press Origin?\n\nmm from the LEFT end of the cutter (0 = fully left).\nMachine width is '+(+settings.safeMaxWidth||600)+' mm, so the room for cutting = machine width − this number.',settings.originFromLeft||0);
+  if(v===null) return; const n=parseFloat(v); if(!isFinite(n)||n<0||n>=(+settings.safeMaxWidth||600)-20){ toast('Type a number between 0 and '+((+settings.safeMaxWidth||600)-20)+'.',true); return; }
+  settings.originFromLeft=Math.round(n*10)/10; saveSettings(); syncSettingsUI(); refreshPropbar(); updateRoom(); draw(); toast('Origin set: '+settings.originFromLeft+' mm from the left. Room for cutting: '+safeW()+' mm.'); }
+function updateRoom(){ const r=$('#cdRoom'); if(r) r.textContent=safeW()+' mm'; }
+function areaDirs(){ const W=safeW(), L=+settings.safeMaxLength||3000;
   return isSide()?{sx:settings.flipFeed?-1:1, sy:settings.flipAcross?1:-1, limX:L, limY:W}:{sx:settings.flipAcross?-1:1, sy:settings.flipFeed?-1:1, limX:W, limY:L}; }
 const xShow=o=>fromRight()?settings.vinylWidth-o.x-o.w:o.x;
 function vinylLength(){ const b=jobBBox(); return Math.max(400,b?(isSide()?b.x1:b.y1)+100:0); }
@@ -1108,9 +1116,9 @@ function refreshPropbar(){
       <span class="sw" title="Colour: ${escapeHtml(colorName(o.color))}" style="display:inline-block;width:20px;height:20px;background:${o.color}"></span>`;
   }
   h+=`<div class="pbzoom"><button data-z="out" title="Zoom out">−</button><span id="pbZoomV" style="min-width:46px;text-align:center"></span><button data-z="in" title="Zoom in">＋</button>
-    <button data-z="100" title="Real size">1:1</button><button data-z="fit" title="Fit vinyl">Fit</button><button data-z="sel" title="Zoom to selection">Selection</button><span class="pbsep"></span><button class="tg ${settings.mirror?'on':''}" id="pbMirror" title="Mirror the cut – for heat-transfer vinyl (HTV)">Mirror: ${settings.mirror?'ON':'OFF'}</button><button class="tg ${settings.sideView?'on':''}" id="pbSide" title="Show the vinyl lying sideways (roll runs left to right)">Vinyl sideways: ${settings.sideView?'ON':'OFF'}</button><button class="tg ${settings.areaOn?'on':''}" id="pbArea" title="Show / hide the green cutting area">Cutting area: ${settings.areaOn?'ON':'OFF'}</button></div>`;
+    <button data-z="100" title="Real size">1:1</button><button data-z="fit" title="Fit vinyl">Fit</button><button data-z="sel" title="Zoom to selection">Selection</button><span class="pbsep"></span><button class="tg ${settings.mirror?'on':''}" id="pbMirror" title="Mirror the cut – for heat-transfer vinyl (HTV)">Mirror: ${settings.mirror?'ON':'OFF'}</button><button class="tg ${settings.sideView?'on':''}" id="pbSide" title="Show the vinyl lying sideways (roll runs left to right)">Vinyl sideways: ${settings.sideView?'ON':'OFF'}</button><button class="tg ${settings.areaOn?'on':''}" id="pbArea" title="Show / hide the green cutting area">Cutting area: ${settings.areaOn?'ON':'OFF'}</button><button class="tg" id="pbOrigin" title="Where the blade is when you press Origin – click to change">⊕ ${originText()}</button></div>`;
   pb.innerHTML=h; updateZoomLabel();
-  $('#pbSide').onclick=toggleSide; $('#pbMirror').onclick=()=>setMirror(!settings.mirror);
+  $('#pbOrigin').onclick=askOrigin; $('#pbSide').onclick=toggleSide; $('#pbMirror').onclick=()=>setMirror(!settings.mirror);
   $('#pbArea').onclick=()=>{ settings.areaOn=!settings.areaOn; saveSettings(); syncSettingsUI(); refreshPropbar(); draw(); };
   pb.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{ const z=b.dataset.z, rc=cv.getBoundingClientRect(), cx=rc.left+rc.width/2, cy=rc.top+rc.height/2;
     if(z==='in') zoomAt(cx,cy,1.4); else if(z==='out') zoomAt(cx,cy,1/1.4); else if(z==='100') zoomAt(cx,cy,REAL_Z/view.z); else if(z==='fit') fit(); else zoomSel(); });
@@ -1191,7 +1199,7 @@ function buildTemplates(){
   $('#tplSheets').innerHTML=TPL_SHEETS.map(([n,w,h],i)=>`<button data-tsh="${i}">${n}<small>${w} × ${h} mm</small></button>`).join('');
   $('#tplSigns').innerHTML=TPL_SIGNS.map(([n,w,h],i)=>`<button data-tsg="${i}">${n}<small>${w} × ${h} mm</small></button>`).join('');
   $$('[data-roll]').forEach(b=>b.onclick=()=>{ const w=+b.dataset.roll; settings.vinylWidth=w; saveSettings(); syncSettingsUI(); buildTemplates(); fit();
-    toast(`Vinyl roll width set to ${w} mm.`+(w>(+settings.safeMaxWidth||600)?` Note: your safe cutting width is ${settings.safeMaxWidth} mm.`:'')); });
+    toast(`Vinyl roll width set to ${w} mm.`+(w>(safeW())?` Note: your safe cutting width is ${settings.safeMaxWidth} mm.`:'')); });
   $$('[data-tsh]').forEach(b=>b.onclick=()=>{ const [n,w,h]=TPL_SHEETS[+b.dataset.tsh]; setGuide(n,w,h); });
   $$('[data-tsg]').forEach(b=>b.onclick=()=>{ const [n,w,h]=TPL_SIGNS[+b.dataset.tsg]; setGuide(n,w,h); });
   const g=settings.guide, el=$('#tplGuide');
@@ -1202,7 +1210,7 @@ function buildTemplates(){
     else if(a==='fit'){ const rc=cv.getBoundingClientRect(); view.z=Math.min((rc.width-80)/(g.w+20),(rc.height-80)/(g.h+20)); view.ox=40-(g.x-10)*view.z; view.oy=40-(g.y-10)*view.z; }
     saveSettings(); buildTemplates(); draw(); }); }
 function setGuide(name,w,h){ const m=(+settings.margin||0)+5; settings.guide={name,w,h,x:m,y:m}; saveSettings(); buildTemplates(); draw();
-  const big=Math.max(w,h)>Math.max(+settings.safeMaxWidth||600,+settings.safeMaxLength||3000)||Math.min(w,h)>(+settings.safeMaxWidth||600);
+  const big=Math.max(w,h)>Math.max(safeW(),+settings.safeMaxLength||3000)||Math.min(w,h)>(safeW());
   toast(`${name} guide (${w} × ${h} mm) shown on the vinyl – design inside it.`+(big?' It is bigger than your safe cutting area.':'')); }
 function drawGuide(px){ const g=settings.guide; if(!g) return;
   ctx.fillStyle='rgba(37,99,235,.05)'; ctx.fillRect(g.x,g.y,g.w,g.h); ctx.strokeStyle='#2563eb'; ctx.lineWidth=1.4*px; ctx.setLineDash([7*px,4*px]); ctx.strokeRect(g.x,g.y,g.w,g.h); ctx.setLineDash([]);
@@ -1464,7 +1472,7 @@ function dmplExtents(text){ const r=/([UD])(-?\d+),(-?\d+)/g; let m, aMin=Infini
     aMin=Math.min(aMin,a); aMax=Math.max(aMax,a); fMin=Math.min(fMin,f); fMax=Math.max(fMax,f); }
   return n?{aMin,aMax,fMin,fMax}:null; }
 function safetyCheck(text){ const e=dmplExtents(text); if(!e) return {ok:true};
-  const W=+settings.safeMaxWidth||600, L=+settings.safeMaxLength||3000, why=[];
+  const W=safeW(), L=+settings.safeMaxLength||3000, why=[];
   if(e.aMin<-0.5||e.fMin<-0.5) why.push('it would move the head behind the origin point');
   if(e.aMax>W+0.01) why.push(`it is ${r2(e.aMax)} mm across – your safe limit is ${W} mm`);
   if(e.fMax>L+0.01) why.push(`it is ${r2(e.fMax)} mm long – your safe limit is ${L} mm`);
@@ -1478,7 +1486,7 @@ function drawCutArea(px){ const o=cutOriginCanvas(), dd=areaDirs(), sx=dd.sx, sy
   const x0=Math.min(o[0],o[0]+sx*W), y0=Math.min(o[1],o[1]+sy*L);
   ctx.fillStyle=fits?'rgba(22,163,74,.04)':'rgba(220,38,38,.06)'; ctx.fillRect(x0,y0,W,L);
   ctx.strokeStyle=col; ctx.lineWidth=1.5*px; ctx.setLineDash([10*px,5*px]); ctx.strokeRect(x0,y0,W,L); ctx.setLineDash([]);
-  ctx.fillStyle=col; ctx.font=`600 ${11*px}px Segoe UI`; const lbl=`Cutting area ${+settings.safeMaxWidth||600} × ${+settings.safeMaxLength||3000} mm${fits?'':' – design does NOT fit'}`;
+  ctx.fillStyle=col; ctx.font=`600 ${11*px}px Segoe UI`; const lbl=`Room from Origin ${safeW()} × ${+settings.safeMaxLength||3000} mm${fits?'':' – design does NOT fit'}`;
   const lw=ctx.measureText(lbl).width, lx=sx<0?o[0]-lw-12*px:o[0]+12*px, ly=o[1]+(sy<0?-8:16)*px; ctx.fillStyle='rgba(255,255,255,.85)'; ctx.fillRect(lx-3*px,ly-11*px,lw+6*px,15*px); ctx.fillStyle=col; ctx.fillText(lbl,lx,ly);
   // blade start (origin) marker
   ctx.beginPath(); ctx.arc(o[0],o[1],6*px,0,7); ctx.fillStyle='#fff'; ctx.fill(); ctx.lineWidth=2*px; ctx.strokeStyle=col; ctx.stroke();
@@ -1620,7 +1628,7 @@ async function addQR(){ const txt=$('#tlQR').value.trim(); if(!txt){ toast('Type
 /* ---- tiling: split a sign that is bigger than the vinyl into overlapping panels ---- */
 async function tileDesign(){ const src=(sel.size?selected():objects).filter(o=>vis(o)&&o.contours.length&&o.kind!=='print'); if(!src.length){ toast('Nothing to tile.',true); return; }
   const side=isSide(), b=jobBBox(src), along=side?b.y1-b.y0:b.x1-b.x0;
-  const tw=Math.max(50,parseFloat($('#tlTile').value)||((Math.min(settings.vinylWidth,+settings.safeMaxWidth||600))-2*(+settings.margin||0)-10)), ov=Math.max(0,parseFloat($('#tlOverlap').value)||10);
+  const tw=Math.max(50,parseFloat($('#tlTile').value)||((Math.min(settings.vinylWidth,safeW()))-2*(+settings.margin||0)-10)), ov=Math.max(0,parseFloat($('#tlOverlap').value)||10);
   if(along<=tw){ toast(`The design is ${r2(along)} mm – it already fits in one ${tw} mm panel.`); return; }
   if(ov>=tw/2){ toast('Overlap is too big for this panel size.',true); return; }
   const n=Math.ceil((along-ov)/(tw-ov));
@@ -1864,8 +1872,8 @@ async function autoConnect(){ if(!('serial' in navigator)) return; try{ const ps
 if('serial' in navigator) navigator.serial.addEventListener('disconnect',e=>{ if(port&&e.target===port){ port=null; setConn(false,'Cutter unplugged'); toast('Cutter disconnected.',true); } });
 async function sendToCutter(text,opts){ opts=opts||{};
   if(sending) return false;
-  const sc=safetyCheck(text); if(!sc.ok){ toast('BLOCKED for safety: '+sc.why.join('; ')+'. Change it in ⚙ Cutter settings → Safety if your cutter can do more.',true); return false; }
-  if(opts.confirm&&settings.safeConfirm&&sc.e&&!confirm(`: `+r2(sc.e.aMax-Math.max(0,sc.e.aMin))+' mm across × '+r2(sc.e.fMax-Math.max(0,sc.e.fMin))+' mm long.\n(Safe area: '+settings.safeMaxWidth+' × '+settings.safeMaxLength+' mm)\n\nVinyl loaded, rollers down, Origin pressed?\nCut now?')) return false;
+  const sc=safetyCheck(text); if(!sc.ok){ toast('BLOCKED for safety: '+sc.why.join('; ')+'. ('+originText()+'.) Check ⚙ Cutter settings → Safety.',true); return false; }
+  if(opts.confirm&&settings.safeConfirm&&sc.e&&!confirm(`${opts.confirm}: `+r2(sc.e.aMax-Math.max(0,sc.e.aMin))+' mm across × '+r2(sc.e.fMax-Math.max(0,sc.e.fMin))+' mm long.\n(Room: '+safeW()+' × '+settings.safeMaxLength+' mm — '+originText()+')\n\nVinyl loaded, rollers down, Origin pressed?\nCut now?')) return false;
   if(!port){ const ok=await connect(); if(!ok||!port) return false; }
   const bytes=new TextEncoder().encode(text); sending=true; cancelSend=false;
   $('#progress').style.display='block'; $('#bStop').style.display=''; $('#bCut').disabled=$('#bTest').disabled=true;
@@ -1936,12 +1944,12 @@ async function openProject(file){ const d=safeJSON(await file.text()); if(!d||!A
 /* ======================= settings UI / wiring ======================= */
 function syncSettingsUI(){ $$('[data-s]').forEach(el=>{ const v=settings[el.dataset.s]; if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; }); }
 $$('[data-s]').forEach(el=>el.addEventListener('change',async()=>{ const k=el.dataset.s; let v=el.type==='checkbox'?el.checked:el.value;
-  if(el.type==='number'){ v=parseFloat(v); if(!isFinite(v)) return; } if(k==='baud') v=+v; settings[k]=v; saveSettings(); refreshQuote(); if(k==='mirror'||k==='areaOn') refreshPropbar(); draw();
+  if(el.type==='number'){ v=parseFloat(v); if(!isFinite(v)) return; } if(k==='baud') v=+v; settings[k]=v; saveSettings(); refreshQuote(); if(k==='mirror'||k==='areaOn'||k==='originFromLeft'||k==='safeMaxWidth') refreshPropbar(); updateRoom(); draw();
   if((k==='baud'||k==='flow')&&port){ try{ await port.close(); await openPort(port); }catch(e){ port=null; setConn(false,'Not connected'); } } }));
 $('#bReset').onclick=()=>{ if(!confirm('Reset machine settings to the working defaults (DMPL, 38400 baud)?')) return; for(const k of MACHINE_KEYS) settings[k]=DEFAULTS[k]; saveSettings(); syncSettingsUI(); draw(); };
 /* ---------- Cutter Settings window ---------- */
 function refreshCutterDlg(){ const s=$('#cdMat'); s.innerHTML=materials.map((m,i)=>`<option value="${i}" ${i==settings.material?'selected':''}>${escapeHtml(m.name)}</option>`).join('');
-  const m=materials[settings.material]||{}; $('#cdSpeed').textContent=m.speed??'–'; $('#cdForce').textContent=m.force??'–'; syncSettingsUI(); }
+  const m=materials[settings.material]||{}; $('#cdSpeed').textContent=m.speed??'–'; $('#cdForce').textContent=m.force??'–'; syncSettingsUI(); updateRoom(); }
 function openCutterSettings(){ refreshCutterDlg(); $('#cutDlg').showModal(); }
 function closeCutterSettings(){ $('#cutDlg').close(); syncSettingsUI(); refreshMaterials(); refreshQuote(); draw(); }
 $('#bCutSet').onclick=openCutterSettings;
