@@ -1863,11 +1863,79 @@ async function importCutFile(file){ const name=file.name.toLowerCase(), text=awa
   cs=cs.filter(c=>c.length>1); if(!cs.length){ toast('No cut lines found in this file.',true); return; }
   pushUndo(); const o=objFromWorld(cs,settings.curColor||'#111111','svg'); o.params={name:file.name}; placeNew(o); changed(); fit();
   toast(`Opened ${file.name}: ${r2(o.w)} × ${r2(o.h)} mm, ${cs.length} line(s).`); }
+/* ---- PDF / AI import. Illustrator (.ai) files with "PDF compatibility" are PDFs inside, so one reader does both.
+   pdf.js (lib/, Apache-2.0) is loaded only when needed. Vector paths -> cut lines (mm), grouped by colour. Page 1 only. ---- */
+let pdfjsReady=null;
+function loadPdfJs(){ if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return pdfjsReady||(pdfjsReady=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='lib/pdf.min.js';
+    s.onload=()=>{ try{ pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js'; res(pdfjsLib); }catch(e){ rej(e); } };
+    s.onerror=()=>{ pdfjsReady=null; rej(new Error('the PDF reader files (lib/pdf.min.js) were not found')); }; document.head.appendChild(s); })); }
+/* PDFIMPORT-START */
+async function pdfToGroups(lib,data){
+  const doc=await lib.getDocument({data,isEvalSupported:false}).promise, page=await doc.getPage(1), vp=page.getViewport({scale:1}), O=lib.OPS, ol=await page.getOperatorList();
+  const K=25.4/72, mul=(a,b)=>[a[0]*b[0]+a[1]*b[2],a[0]*b[1]+a[1]*b[3],a[2]*b[0]+a[3]*b[2],a[2]*b[1]+a[3]*b[3],a[4]*b[0]+a[5]*b[2]+b[4],a[4]*b[1]+a[5]*b[3]+b[5]];
+  let ctm=vp.transform.slice(), fill='#000000', stroke='#000000', stack=[], cur=[], sub=null, cx=0, cy=0, hasText=false, hasImage=false, skippedWhite=0;
+  const hex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+  const ap=p=>[(p[0]*ctm[0]+p[1]*ctm[2]+ctm[4])*K,(p[0]*ctm[1]+p[1]*ctm[3]+ctm[5])*K];
+  const need=()=>{ if(!sub){ sub=[[cx,cy]]; cur.push({pts:sub,closed:false}); } };
+  const bez=(x0,y0,x1,y1,x2,y2,x3,y3)=>{ need(); const s=Math.hypot(ctm[0],ctm[1])*K, L=(Math.hypot(x1-x0,y1-y0)+Math.hypot(x2-x1,y2-y1)+Math.hypot(x3-x2,y3-y2))*s, n=Math.max(4,Math.min(60,Math.ceil(L/0.8)));
+    for(let i=1;i<=n;i++){ const t=i/n, u=1-t; sub.push([u*u*u*x0+3*u*u*t*x1+3*u*t*t*x2+t*t*t*x3, u*u*u*y0+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3]); } cx=x3; cy=y3; };
+  const addPath=(ops,c)=>{ let i=0;
+    for(const op of ops){
+      if(op===O.moveTo){ sub=[[c[i],c[i+1]]]; cur.push({pts:sub,closed:false}); cx=c[i]; cy=c[i+1]; i+=2; }
+      else if(op===O.lineTo){ need(); sub.push([c[i],c[i+1]]); cx=c[i]; cy=c[i+1]; i+=2; }
+      else if(op===O.curveTo){ bez(cx,cy,c[i],c[i+1],c[i+2],c[i+3],c[i+4],c[i+5]); i+=6; }
+      else if(op===O.curveTo2){ bez(cx,cy,cx,cy,c[i],c[i+1],c[i+2],c[i+3]); i+=4; }
+      else if(op===O.curveTo3){ bez(cx,cy,c[i],c[i+1],c[i+2],c[i+3],c[i+2],c[i+3]); i+=4; }
+      else if(op===O.closePath){ if(sub){ cur[cur.length-1].closed=true; cx=sub[0][0]; cy=sub[0][1]; sub=null; } }
+      else if(op===O.rectangle){ const x=c[i],y=c[i+1],w=c[i+2],h=c[i+3]; cur.push({pts:[[x,y],[x+w,y],[x+w,y+h],[x,y+h]],closed:true}); sub=null; cx=x; cy=y; i+=4; } } };
+  const byColor=new Map(), pageA=vp.width*vp.height*K*K;
+  const paint=(kind,close)=>{ const col=(kind==='S')?stroke:fill;
+    for(const p of cur){ if(p.pts.length<2) continue; let pts=p.pts.map(ap); const f=p.closed||close||kind!=='S';
+      if(f&&pts.length>2){ const a=pts[0], b=pts[pts.length-1]; if(Math.hypot(a[0]-b[0],a[1]-b[1])<0.01) pts.pop(); }
+      if(kind!=='S'&&col==='#ffffff'){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const q of pts){ x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); }
+        if((x1-x0)*(y1-y0)>=0.9*pageA){ skippedWhite++; continue; } }
+      if(!byColor.has(col)) byColor.set(col,[]); byColor.get(col).push(pts); }
+    cur=[]; sub=null; };
+  for(let i=0;i<ol.fnArray.length;i++){ const fn=ol.fnArray[i], a=ol.argsArray[i];
+    switch(fn){
+      case O.save: stack.push([ctm.slice(),fill,stroke]); break;
+      case O.restore: if(stack.length){ const s=stack.pop(); ctm=s[0]; fill=s[1]; stroke=s[2]; } break;
+      case O.transform: ctm=mul(a,ctm); break;
+      case O.paintFormXObjectBegin: stack.push([ctm.slice(),fill,stroke]); if(a&&a[0]) ctm=mul(a[0],ctm); break;
+      case O.paintFormXObjectEnd: if(stack.length){ const s=stack.pop(); ctm=s[0]; fill=s[1]; stroke=s[2]; } break;
+      case O.setFillRGBColor: fill=hex(a[0],a[1],a[2]); break;
+      case O.setStrokeRGBColor: stroke=hex(a[0],a[1],a[2]); break;
+      case O.constructPath: addPath(a[0],a[1]); break;
+      case O.stroke: paint('S',false); break; case O.closeStroke: paint('S',true); break;
+      case O.fill: case O.eoFill: paint('F',false); break;
+      case O.fillStroke: case O.eoFillStroke: paint('F',false); break;
+      case O.closeFillStroke: case O.closeEOFillStroke: paint('F',true); break;
+      case O.endPath: cur=[]; sub=null; break;
+      case O.showText: case O.showSpacedText: case O.nextLineShowText: case O.nextLineSetSpacingShowText: hasText=true; break;
+      case O.paintImageXObject: case O.paintInlineImageXObject: case O.paintImageMaskXObject: case O.paintJpegXObject: hasImage=true; break; } }
+  const groups=[...byColor].map(([color,contours])=>({color,contours}));
+  return {groups,pages:doc.numPages,hasText,hasImage,skippedWhite,pageW:vp.width*K,pageH:vp.height*K}; }
+/* PDFIMPORT-END */
+async function importPdf(file){
+  try{ const buf=new Uint8Array(await file.arrayBuffer()), head=new TextDecoder('latin1').decode(buf.subarray(0,1024));
+    if(!head.includes('%PDF')){ toast('This '+(/\.ai$/i.test(file.name)?'.ai':'')+' file has no PDF inside (old format). In Illustrator use Save As → tick "Create PDF Compatible File", or export it as SVG, then open that.',true); return; }
+    toast('Reading '+file.name+' …'); const lib=await loadPdfJs(), r=await pdfToGroups(lib,buf), groups=r.groups.filter(g=>g.contours.length);
+    if(!groups.length){ toast('No vector cut lines found'+(r.hasText?' – the file only has live text: convert text to outlines (Illustrator: Type → Create Outlines) and save again.':r.hasImage?' – the file only has a picture. Open it as an image instead (PNG/JPG).':'.'),true); return; }
+    pushUndo(); const all=bboxOf(groups.flatMap(g=>g.contours)); let k=1; const gw=all.x1-all.x0; if(gw>settings.vinylWidth-20) k=(settings.vinylWidth-20)/gw;
+    const b=jobBBox(), baseX=b?Math.max(5,b.x0):20, baseY=b?b.y1+10:20, ids=[];
+    for(const g of groups){ const n=normalize(g.contours);
+      const o=newObj('svg',{x:baseX+(n.x-all.x0)*k,y:baseY+(n.y-all.y0)*k,w:n.w*k,h:n.h*k,contours:n.contours,color:g.color,params:{name:file.name}}); objects.push(o); ids.push(o.id); }
+    select(ids); changed(); fit();
+    const notes=[]; if(r.pages>1) notes.push('only page 1 of '+r.pages+' was used'); if(r.hasText) notes.push('live text was NOT converted – outline it first'); if(r.hasImage) notes.push('pictures inside were skipped'); if(r.skippedWhite) notes.push('white page background ignored'); if(k<1) notes.push('scaled to fit the vinyl');
+    toast(`Imported ${file.name}: ${r2(gw*k)} × ${r2((all.y1-all.y0)*k)} mm, ${groups.length} colour layer(s)`+(notes.length?' – '+notes.join('; '):''),!!(r.hasText));
+  }catch(e){ toast('Could not read this PDF/AI file: '+(e&&e.message||e),true); } }
 function importAny(file){ const n=file.name.toLowerCase();
   if(/\.svg$/.test(n)) return importSvg(file);
   if(/\.(ttf|otf|woff2?)$/.test(n)) return addFontFiles([file]);
   if(/\.(dxf|plt|hpgl|hpg|plo)$/.test(n)) return importCutFile(file);
-  if(/\.(pdf|ai|eps|cdr)$/.test(n)){ toast('PDF / AI / EPS / CDR can\'t be opened directly. In the program that made it (or free Inkscape), save it as SVG or DXF, then open that.',true); return; }
+  if(/\.(pdf|ai)$/.test(n)) return importPdf(file);
+  if(/\.(eps|cdr)$/.test(n)){ toast('EPS / CDR can\'t be opened directly. In the program that made it (or free Inkscape), save it as SVG, PDF or DXF, then open that.',true); return; }
   if(/\.(vcut|json)$/.test(n)) return openProject(file);
   if(file.type.startsWith('image/')) return importImage(file);
   toast('Unknown file type.',true); }
