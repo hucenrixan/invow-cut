@@ -91,3 +91,7 @@ The cutter sends no position or status information back. That's why every size a
 | `Send-ToCutter.ps1` / `Send file to cutter.bat` | Backup way to send a saved cut file on Windows |
 | `README.txt` | Short user guide |
 | `InvowCut-v1-backup.html` | First version, kept for reference |
+
+## License
+
+[MIT](LICENSE): free to use, copy, change and share, including for commercial work. Keep the copyright notice. The software comes with no warranty: always test-cut on scrap vinyl and set the safety limits for your own machine.
