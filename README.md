@@ -26,7 +26,7 @@ The plotter must show up as a **serial (COM) port**. USB-only craft cutters (Sil
 - **Pen tool**, **Points tool** (move, add or delete points) and **Knife tool** (slice a shape in two)
 - **Weld, Subtract, Intersect, Break apart**
 - **Outline / Offset** for sticker borders
-- **Trace image:** turns a PNG or JPG logo into cut lines
+- **Trace image:** turns a PNG or JPG into cut lines, with modes for logos (auto threshold), **photo stencils** (adaptive, for faces), **cut-out outlines** (removes a plain background), **line drawings** (edges) and manual threshold. **Split into colour layers** makes one vinyl layer per colour, matched to your vinyl colour list
 - **Import** SVG (each colour becomes a layer), DXF and PLT/HPGL
 - **Export** DXF and SVG, plus **Export for Silhouette**: a 300 dpi print picture (PNG) and its cut line (DXF) at the same size, for automatic Print & Cut on a Silhouette Cameo in the free Silhouette Studio
 
