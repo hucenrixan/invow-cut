@@ -206,6 +206,7 @@ h3{color:#6b7280}
     <div id="progress"><div></div></div>
     <span class="dot" id="dot"></span><span id="connText">Not connected</span>
     <button id="bCutSet" title="Cutter settings: connection, material, force, size">⚙ Cutter settings</button><button id="bConnect">Connect cutter</button>
+    <button id="bShow" title="Blade UP: the head travels around the outer box of your design (nothing is cut), then goes home">Show position</button>
     <button id="bTest" title="20 mm square + letter F">Test cut</button>
     <button id="bCut" class="go">CUT ▶</button>
     <button id="bStop" class="danger" style="display:none">Stop</button>
@@ -2032,13 +2033,13 @@ async function sendToCutter(text,opts){ opts=opts||{};
   if(opts.confirm&&settings.safeConfirm&&sc.e&&!confirm(`${opts.confirm}: `+r2(sc.e.aMax-Math.max(0,sc.e.aMin))+' mm across × '+r2(sc.e.fMax-Math.max(0,sc.e.fMin))+' mm long.\n(Room: '+safeW()+' × '+settings.safeMaxLength+' mm — '+originText()+')\n\nVinyl loaded, rollers down, Origin pressed?\nCut now?')) return false;
   if(!port){ const ok=await connect(); if(!ok||!port) return false; }
   const bytes=new TextEncoder().encode(translateJob(text)); sending=true; cancelSend=false;
-  $('#progress').style.display='block'; $('#bStop').style.display=''; $('#bCut').disabled=$('#bTest').disabled=true;
+  $('#progress').style.display='block'; $('#bStop').style.display=''; $('#bCut').disabled=$('#bTest').disabled=$('#bShow').disabled=true;
   const bar=$('#progress>div'); let writer, ok=false;
   try{ writer=port.writable.getWriter();
     for(let i=0;i<bytes.length;i+=128){ if(cancelSend) break; await writer.write(bytes.subarray(i,i+128)); bar.style.width=Math.min(100,(i+128)/bytes.length*100)+'%'; }
     if(cancelSend) toast('Stopped. Press Pause/Reset on the cutter to stop what is already in its memory.',true); else { if(!opts.quiet) toast('Sent to cutter ✓'); ok=true; } }
   catch(e){ toast('Sending failed: '+e.message,true); }
-  finally{ try{ writer&&writer.releaseLock(); }catch(e){} sending=false; $('#bStop').style.display='none'; $('#bCut').disabled=$('#bTest').disabled=false; setTimeout(()=>{ $('#progress').style.display='none'; bar.style.width='0'; },1500); }
+  finally{ try{ writer&&writer.releaseLock(); }catch(e){} sending=false; $('#bStop').style.display='none'; $('#bCut').disabled=$('#bTest').disabled=$('#bShow').disabled=false; setTimeout(()=>{ $('#progress').style.display='none'; bar.style.width='0'; },1500); }
   return ok; }
 async function cutLayers(colors){
   const job=buildJob(colors); if(!job.paths.length){ toast('Nothing to cut in this colour.',true); return; }
@@ -2058,6 +2059,22 @@ function cut(){ const cm=materials[settings.material];
   $$('[data-dc]').forEach(b=>b.onclick=async()=>{ b.disabled=true; await cutLayers([b.dataset.dc]); b.textContent='✓ Cut again'; b.disabled=false; });
   $('[data-dall]').onclick=()=>{ $('#layerDlg').close(); cutLayers(ls.map(l=>l.color)); };
   $('#layerDlg').showModal(); }
+/* Show position: blade-UP trace of the design's outer box. Same mapping as a real cut (toDevice), only "U" moves,
+   then the cutter returns to its origin by itself. This cutter cannot park the head, so this is a preview, not a jog. */
+async function showPosition(){
+  const ls=layersInUse().filter(l=>!isHidden(l.color));
+  if(!ls.length){ toast('Nothing to show – add a design first.',true); return; }
+  const job=buildJob(null); if(!job.paths.length){ toast('Nothing to show – add a design first.',true); return; }
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const c of job.paths) for(const p of c){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); }
+  const d=toDevice({bbox:job.bbox,paths:[[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]]]}), r=d.paths[0];
+  if(!r||r.length<2){ toast('Nothing to show.',true); return; }
+  if(!confirm('Show position (blade UP, nothing is cut):\n\nthe head will travel around the outer box of your design ('+r2(x1-x0)+' × '+r2(y1-y0)+' mm) twice, then go back to the Origin.\n\nOrigin pressed and the blade lifted/clear of the vinyl?\nStart?')) return;
+  const parts=[settings.header];
+  for(let k=0;k<2;k++) for(const q of r) parts.push('U'+q[0]+','+q[1]);
+  parts.push('U'); parts.push('U0,0');
+  if(await sendToCutter(parts.join(' ')+' '+settings.footer+' '+' '.repeat(120),{quiet:true}))
+    toast('Watch the head: it goes around the design box twice (blade up), then returns home. If it is in the wrong place, move the design or slide the vinyl and try again.'); }
 async function testCut(){
   const sq=newObj('shape',{x:0,y:0,w:20,h:20,params:{shape:'rect'}}); regen(sq);
   const items=[sq]; if(settings.testF){ const f=newObj('text',{x:25,y:0,h:20,params:{text:'F',font:'Arial',bold:true,align:'left',spacing:0,lineHeight:1.2,curve:0}}); await regen(f); items.push(f); nextId--; } nextId--;
@@ -2176,7 +2193,7 @@ $('#bAddFont').onclick=()=>$('#fFont').click(); $('#fFont').onchange=e=>{ addFon
 $('#bDxf').onclick=exportDXF; $('#bSil').onclick=exportSilhouette; $('#bSvgOut').onclick=exportSVG;
 $('#bPC').onclick=openPC;
 $('#tlBtnOut').onclick=addOutlineLayer; $('#tlBtnShadow').onclick=addShadowLayer; $('#tlBtnBridge').onclick=stencilBridges; $('#tlBtnNames').onclick=namesList; $('#tlBtnQR').onclick=addQR; $('#tlBtnTile').onclick=tileDesign; $('#tlBtnStones').onclick=rhinestones; $('#fPrint').onchange=e=>{ const f=e.target.files[0]; if(f) addPrintImage(f); e.target.value=''; };
-$('#bConnect').onclick=connect; $('#bCut').onclick=cut; $('#bTest').onclick=testCut; $('#bStop').onclick=()=>{ cancelSend=true; }; $('#bPlt').onclick=savePlt;
+$('#bConnect').onclick=connect; $('#bCut').onclick=cut; $('#bTest').onclick=testCut; $('#bShow').onclick=showPosition; $('#bStop').onclick=()=>{ cancelSend=true; }; $('#bPlt').onclick=savePlt;
 cv.addEventListener('dragover',e=>e.preventDefault());
 cv.addEventListener('drop',e=>{ e.preventDefault(); for(const f of e.dataTransfer.files) importAny(f); });
 
