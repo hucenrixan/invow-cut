@@ -1,0 +1,5 @@
+{
+  "cleanUrls": true,
+  "rewrites": [{ "source": "/", "destination": "/InvowCut.html" }],
+  "headers": [{ "source": "/(.*)", "headers": [{ "key": "Permissions-Policy", "value": "serial=(self)" }] }]
+}
