@@ -148,6 +148,18 @@ header button.danger{color:#fca5a5}
 #toolbox svg{stroke:#d1d5db}
 #toolbox button.on svg{stroke:#fff}
 #toolbox .tsep{background:#3a4150}
+#toolbox .tg{position:relative}
+#toolbox .tg .tarr{position:absolute;right:-3px;bottom:-1px;width:14px;height:14px;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:flex-end;justify-content:flex-end}
+#toolbox .tg .tarr::after{content:"";border-style:solid;border-width:0 0 7px 7px;border-color:transparent transparent #9ca3af transparent}
+#toolbox .tg .tarr:hover::after{border-bottom-color:#fff}
+#tfly{position:fixed;z-index:60;background:#262b37;border:1px solid #121620;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:8px;display:none}
+#tfly.open{display:grid;gap:4px}
+#tfly .fh{grid-column:1/-1;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:0 4px 4px}
+#tfly button{display:flex;flex-direction:column;align-items:center;gap:3px;width:74px;padding:7px 4px;background:none;border:1px solid transparent;border-radius:6px;color:#e5e7eb;font-size:11px;cursor:pointer}
+#tfly button:hover{background:#343a48}
+#tfly button.on{background:#2563eb;border-color:#2563eb;color:#fff}
+#tfly svg{width:24px;height:24px;stroke:#d1d5db;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#tfly button.on svg{stroke:#fff}
 #toolbox [data-act=front] rect[fill]{fill:#4b5563}
 .tabs button.on{color:#2563eb;border-bottom-color:#2563eb}
 h3{color:#6b7280}
@@ -194,21 +206,13 @@ h3{color:#6b7280}
 <div id="propbar"></div>
 <main>
   <nav id="toolbox">
-    <button data-tool="select" title="Select / move (V)"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-3 6z"/></svg></button>
+    <div class="tg" data-g="sel"></div>
     <button data-tool="text" title="Text – click on the vinyl (T)"><svg viewBox="0 0 24 24"><path d="M5 5h14M12 5v15M9 20h6"/></svg></button>
     <div class="tsep"></div>
-    <button data-tool="rect" title="Rectangle – drag (R)"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12"/></svg></button>
-    <button data-tool="rrect" title="Rounded rectangle – drag"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="4"/></svg></button>
-    <button data-tool="ellipse" title="Circle / ellipse – drag (E)"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9" ry="7"/></svg></button>
-    <button data-tool="star" title="Star – drag"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></button>
-    <button data-tool="polygon" title="Polygon – drag"><svg viewBox="0 0 24 24"><path d="M12 3l8 5v8l-8 5-8-5V8z"/></svg></button>
-    <button data-tool="triangle" title="Triangle – drag"><svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/></svg></button>
-    <button data-tool="pen" title="Pen – click points, double-click or click the first point to finish (P)"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/></svg></button>
-    <button data-tool="node" title="Points – move, add or delete points of a shape (N)"><svg viewBox="0 0 24 24"><path d="M4 18L10 6l10 6"/><rect x="2.5" y="16.5" width="3" height="3"/><rect x="8.5" y="4.5" width="3" height="3"/><rect x="18.5" y="10.5" width="3" height="3"/></svg></button>
-    <button data-tool="knife" title="Knife – drag a line across a shape to cut it in two (K)"><svg viewBox="0 0 24 24"><path d="M3 21L14 10"/><path d="M14 10l3-7 4 4-7 3z"/><path d="M2 14l8 8" stroke-dasharray="2 2"/></svg></button>
+    <div class="tg" data-g="shape"></div>
+    <div class="tg" data-g="draw"></div>
     <div class="tsep"></div>
-    <button data-tool="pan" title="Hand – drag to move the view (H)"><svg viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 013 0v6M11 11V4a1.5 1.5 0 013 0v7M14 11V5.5a1.5 1.5 0 013 0V14a7 7 0 01-7 7h-.5a6 6 0 01-5-2.7L3 15.5a1.5 1.5 0 012.5-1.6L8 16"/></svg></button>
-    <button data-tool="zoom" title="Zoom – click to zoom in, Alt+click to zoom out (Z)"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M15 15l5 5M7.5 10h5M10 7.5v5"/></svg></button>
+    <div class="tg" data-g="view"></div>
     <div class="tsep"></div>
     <button data-act="weld" title="Weld selected"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg></button>
     <button data-act="offset" title="Sticker outline / offset"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10"/><rect x="3" y="3" width="18" height="18" rx="4" stroke-dasharray="3 2"/></svg></button>
@@ -914,16 +918,57 @@ cv.addEventListener('pointerup',()=>{
 cv.addEventListener('wheel',e=>{ e.preventDefault(); const rc=cv.getBoundingClientRect(), mx=e.clientX-rc.left, my=e.clientY-rc.top;
   const z=Math.min(80,Math.max(0.03,view.z*Math.exp(-e.deltaY*0.0015))); view.ox=mx-(mx-view.ox)*z/view.z; view.oy=my-(my-view.oy)*z/view.z; view.z=z; draw(); },{passive:false});
 let tool='select', pen=[], penCursor=null;
-const DRAW_TOOLS=['rect','rrect','ellipse','star','polygon','triangle'];
+const DRAW_TOOLS=['rect','square','rrect','ellipse','circle','star','polygon','triangle','diamond','heart','arrow','cross','banner','bubble','frame','ring','badge'];
+const TOOLDEF={
+  select:['Select','Select / move (V)','<path d="M5 3l14 8-6 2-3 6z"/>'],
+  node:['Points','Points – move, add or delete points (N)','<path d="M4 18L10 6l10 6"/><rect x="2.5" y="16.5" width="3" height="3"/><rect x="8.5" y="4.5" width="3" height="3"/><rect x="18.5" y="10.5" width="3" height="3"/>'],
+  rect:['Rectangle','Rectangle – drag (R)','<rect x="3" y="6" width="18" height="12"/>'],
+  square:['Square','Square – drag','<rect x="5" y="5" width="14" height="14"/>'],
+  rrect:['Rounded','Rounded rectangle – drag','<rect x="3" y="6" width="18" height="12" rx="4"/>'],
+  ellipse:['Ellipse','Ellipse / oval – drag (E)','<ellipse cx="12" cy="12" rx="9" ry="6.5"/>'],
+  circle:['Circle','Circle – drag','<circle cx="12" cy="12" r="8"/>'],
+  star:['Star','Star – drag','<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'],
+  polygon:['Hexagon','Polygon – drag','<path d="M12 3l8 5v8l-8 5-8-5V8z"/>'],
+  triangle:['Triangle','Triangle – drag','<path d="M12 4l9 16H3z"/>'],
+  diamond:['Diamond','Diamond – drag','<path d="M12 3l8 9-8 9-8-9z"/>'],
+  heart:['Heart','Heart – drag','<path d="M12 20s-8-5-8-11a4 4 0 018-1 4 4 0 018 1c0 6-8 11-8 11z"/>'],
+  arrow:['Arrow','Arrow – drag','<path d="M3 9h10V5l8 7-8 7v-4H3z"/>'],
+  cross:['Plus','Cross / plus – drag','<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/>'],
+  banner:['Banner','Banner – drag','<path d="M2 7h20l-3 5 3 5H2l3-5z"/>'],
+  bubble:['Bubble','Speech bubble – drag','<path d="M4 4h16v11H10l-5 4v-4H4z"/>'],
+  frame:['Frame','Frame / border – drag','<rect x="3" y="3" width="18" height="18"/><rect x="7" y="7" width="10" height="10"/>'],
+  ring:['Ring','Ring – drag','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/>'],
+  badge:['Badge','Badge (scalloped) – drag','<path d="M12 2l2 2.5 3-1 .5 3 3 .5-1 3L22 12l-2.5 2 1 3-3 .5-.5 3-3-1L12 22l-2-2.5-3 1-.5-3-3-.5 1-3L2 12l2.5-2-1-3 3-.5.5-3 3 1z"/>'],
+  pen:['Pen','Pen – click points, double-click to finish (P)','<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/>'],
+  knife:['Knife','Knife – drag a line across a shape to cut it (K)','<path d="M3 21L14 10"/><path d="M14 10l3-7 4 4-7 3z"/><path d="M2 14l8 8" stroke-dasharray="2 2"/>'],
+  pan:['Hand','Hand – drag to move the view (H)','<path d="M8 13V5a1.5 1.5 0 013 0v6M11 11V4a1.5 1.5 0 013 0v7M14 11V5.5a1.5 1.5 0 013 0V14a7 7 0 01-7 7h-.5a6 6 0 01-5-2.7L3 15.5a1.5 1.5 0 012.5-1.6L8 16"/>'],
+  zoom:['Zoom','Zoom – click to zoom in, Alt+click out (Z)','<circle cx="10" cy="10" r="6"/><path d="M15 15l5 5M7.5 10h5M10 7.5v5"/>']};
+const TGROUPS={sel:{name:'Select',tools:['select','node'],cols:2},shape:{name:'Shapes – pick one, then drag on the vinyl',tools:['rect','square','rrect','ellipse','circle','triangle','star','polygon','diamond','heart','arrow','cross','banner','bubble','frame','ring','badge'],cols:4},
+  draw:{name:'Draw & cut',tools:['pen','knife'],cols:2},view:{name:'View',tools:['pan','zoom'],cols:2}};
+const tsvg=id=>`<svg viewBox="0 0 24 24">${TOOLDEF[id][2]}</svg>`;
+function setGroupMain(g,id){ const b=document.querySelector(`#toolbox .tg[data-g="${g}"] > button[data-tool]`); if(!b) return; b.dataset.tool=id; b.title=TOOLDEF[id][1]+' · small arrow = more'; b.innerHTML=tsvg(id); }
+function buildToolGroups(){ for(const [g,G] of Object.entries(TGROUPS)){ const el=document.querySelector(`#toolbox .tg[data-g="${g}"]`); if(!el) continue;
+    el.innerHTML=`<button data-tool="${G.tools[0]}"></button><button class="tarr" title="More ${G.name.split(' ')[0].toLowerCase()}"></button>`; setGroupMain(g,G.tools[0]);
+    el.querySelector('.tarr').onclick=e=>{ e.stopPropagation(); openFly(g); };
+    el.firstChild.addEventListener('contextmenu',e=>{ e.preventDefault(); openFly(g); }); }
+  const fly=document.createElement('div'); fly.id='tfly'; document.body.appendChild(fly);
+  document.addEventListener('pointerdown',e=>{ if(fly.classList.contains('open')&&!fly.contains(e.target)&&!e.target.closest('.tarr')) fly.classList.remove('open'); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') fly.classList.remove('open'); },true); }
+function openFly(g){ const fly=$('#tfly'), G=TGROUPS[g], el=document.querySelector(`#toolbox .tg[data-g="${g}"]`);
+  if(fly.classList.contains('open')&&fly.dataset.g===g){ fly.classList.remove('open'); return; }
+  fly.dataset.g=g; fly.style.gridTemplateColumns=`repeat(${G.cols},auto)`;
+  fly.innerHTML=`<div class="fh">${G.name}</div>`+G.tools.map(id=>`<button data-ft="${id}" class="${id===tool?'on':''}" title="${TOOLDEF[id][1]}">${tsvg(id)}<span>${TOOLDEF[id][0]}</span></button>`).join('');
+  fly.querySelectorAll('[data-ft]').forEach(b=>b.onclick=()=>{ setTool(b.dataset.ft); fly.classList.remove('open'); });
+  const r=el.getBoundingClientRect(); fly.classList.add('open'); const fh=fly.offsetHeight; fly.style.left=(r.right+6)+'px'; fly.style.top=Math.max(6,Math.min(r.top,innerHeight-fh-6))+'px'; }
 const TOOL_NAMES={text:'Text tool',rect:'Rectangle',rrect:'Rounded rectangle',ellipse:'Circle / ellipse',star:'Star',polygon:'Polygon',triangle:'Triangle',pen:'Pen',knife:'Knife',node:'Points',pan:'Hand',zoom:'Zoom'};
 const TOOL_HINTS={select:'Click to select · Shift+click to add · drag on empty space to box-select · double-click text to edit',text:'Click on the vinyl where the text should start',
   rect:'Drag to draw (Shift = square)',rrect:'Drag to draw (Shift = square)',ellipse:'Drag to draw (Shift = circle)',star:'Drag to draw',polygon:'Drag to draw',triangle:'Drag to draw',
   pen:'Click to add points · click the first point, double-click or press Enter to finish · Esc cancels',node:'Click a shape, then drag its points · double-click a line to add a point · select a point + Delete to remove it',knife:'Drag a line across a shape to cut it in two (Shift = straight/45°). Select shapes first to cut only those.',pan:'Drag to move the view',zoom:'Click to zoom in · Alt+click to zoom out'};
-function setTool(t){ if(t!=='pen') pen=[]; tool=t; $$('#toolbox [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t)); refreshPropbar(); draw(); }
+function setTool(t){ if(t!=='pen') pen=[]; tool=t; for(const [g,G] of Object.entries(TGROUPS)) if(G.tools.includes(t)) setGroupMain(g,t); $$('#toolbox [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t)); refreshPropbar(); draw(); }
 async function createTextAt(m){ pushUndo(); const o=newObj('text',{x:m[0],y:m[1],h:20,params:{text:'Text',font:settings.lastFont||'Arial',bold:true,italic:false,spacing:0,lineHeight:1.2,align:'left',curve:0}});
   await regen(o); o.y=m[1]-o.h/2; objects.push(o); select([o.id]); setTool('select'); showTab('obj'); changed(); const t=$('#propbar .pbtext'); if(t){ t.focus(); t.select(); } }
 function finishDraw(a,b){ let x=Math.min(a[0],b[0]), y=Math.min(a[1],b[1]), w=Math.abs(a[0]-b[0]), h=Math.abs(a[1]-b[1]);
-  if(w<2&&h<2){ w=h=40; x-=20; y-=20; } const kind=tool; setTool('select'); addShape(kind,{x,y,w:Math.max(w,1),h:Math.max(h,1)}); }
+  if(w<2&&h<2){ w=h=40; x-=20; y-=20; } let kind=tool; if(kind==='square'||kind==='circle'){ const s=Math.max(w,h); w=h=s; kind=kind==='square'?'rect':'ellipse'; } setTool('select'); addShape(kind,{x,y,w:Math.max(w,1),h:Math.max(h,1)}); }
 function penClick(m){ if(pen.length>2&&Math.hypot(m[0]-pen[0][0],m[1]-pen[0][1])<7/view.z){ finishPen(); return; } const l=pen[pen.length-1]; if(!l||Math.hypot(m[0]-l[0],m[1]-l[1])>0.3) pen.push(m); draw(); }
 function finishPen(){ const pts=pen.slice(); pen=[]; penCursor=null; if(pts.length<3){ toast('A pen shape needs 3 or more points.',true); draw(); return; }
   pushUndo(); const o=objFromWorld([pts],settings.curColor); objects.push(o); select([o.id]); setTool('select'); changed(); }
@@ -1041,7 +1086,8 @@ function bindObjInputs(root,o){
 /* ---------- properties bar (above the vinyl) ---------- */
 function refreshPropbar(){
   const pb=$('#propbar'), list=selected(); let h='';
-  if(tool!=='select'&&TOOL_HINTS[tool]) h=`<b>${TOOL_NAMES[tool]||''}</b><span class="pbhint">${TOOL_HINTS[tool]}</span>`;
+  if(tool!=='select'&&!TOOL_HINTS[tool]&&DRAW_TOOLS.includes(tool)) TOOL_HINTS[tool]='Drag to draw (Shift = same width and height)';
+  if(tool!=='select'&&TOOL_HINTS[tool]) h=`<b>${TOOL_NAMES[tool]||(TOOLDEF[tool]||[])[0]||''}</b><span class="pbhint">${TOOL_HINTS[tool]}</span>`;
   else if(!list.length) h=`<span class="pbhint">${TOOL_HINTS.select}</span>`;
   else if(list.length>1) h=`<b>${list.length} selected</b><span class="pbsep"></span>
     <button data-al="l" title="Align left">⇤ Left</button><button data-al="cx" title="Centre">Centre</button><button data-al="r" title="Align right">Right ⇥</button>
@@ -1917,6 +1963,7 @@ $('#bOpen').onclick=()=>$('#fProj').click(); $('#fProj').onchange=e=>{ const f=e
 $('#bWeld').onclick=()=>combine('add'); $('#bSub').onclick=()=>combine('sub'); $('#bInt').onclick=()=>combine('int');
 $('#bBreak').onclick=breakApart; $('#bOffset').onclick=openOffset; $('#offOk').onclick=doOffset; $('#offCancel').onclick=()=>$('#offDlg').close();
 $('#bSave').onclick=saveProject; $('#bDup').onclick=duplicate; $('#bDel').onclick=del; $('#bArray').onclick=copiesGrid; $('#bNest').onclick=nest;
+buildToolGroups();
 $$('#toolbox [data-tool]').forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
 $$('#toolbox [data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act, list=selected(); if(a==='weld') return combine('add'); if(a==='offset') return openOffset();
   if(!list.length){ toast('Select something first.',true); return; } pushUndo();
