@@ -360,6 +360,8 @@ h3{color:#6b7280}
 
     <div class="tabpane" id="t-mach"><div class="btnrow"><button class="primary" onclick="openCutterSettings()">⚙ Open Cutter Settings window</button></div>
       <h3>Cutter connection</h3>
+      <label class="row"><span>Cutter model</span><select class="profSel" onchange="applyProfile(this.value)"><option value="c630">630 vinyl cutter (DMPL) – tested</option><option value="hpgl">HPGL cutter (Redsail, Liyu, Jinka, Vicsign, Teneth…)</option><option value="roland">Roland (HPGL mode)</option><option value="gpgl">Graphtec / GP-GL</option><option value="dmpl">Other DMPL cutter</option><option value="custom">Custom</option></select></label>
+      <div class="hint profNote"></div>
       <label class="row"><span>Baud rate</span><select data-s="baud"><option>9600</option><option>19200</option><option>38400</option><option>57600</option><option>115200</option></select></label>
       <label class="row"><span>Handshake</span><select data-s="flow"><option value="hardware">Hardware (RTS/CTS)</option><option value="none">None</option></select></label>
       <h3>Machine</h3>
@@ -407,7 +409,9 @@ h3{color:#6b7280}
     <section class="cd-card">
       <h4>1 · Connection</h4>
       <div class="cd-status"><span class="dot" id="cdDot"></span><b id="cdConnText">Not connected</b></div>
-      <div class="hint">Cutter: 630 mm vinyl cutter · USB (COM3) · DMPL</div>
+      <label class="row"><span>Cutter model</span><select class="profSel" onchange="applyProfile(this.value)"><option value="c630">630 vinyl cutter (DMPL) – tested</option><option value="hpgl">HPGL cutter (Redsail, Liyu, Jinka, Vicsign, Teneth…)</option><option value="roland">Roland (HPGL mode)</option><option value="gpgl">Graphtec / GP-GL</option><option value="dmpl">Other DMPL cutter</option><option value="custom">Custom</option></select></label>
+      <div class="hint profNote"></div>
+      <label class="row"><span>Language</span><select data-s="lang"><option value="dmpl">DMPL</option><option value="hpgl">HPGL</option><option value="gpgl">GP-GL</option></select></label>
       <label class="row"><span>Baud rate</span><select data-s="baud"><option>9600</option><option>19200</option><option>38400</option><option>57600</option><option>115200</option></select></label>
       <label class="row"><span>Handshake</span><select data-s="flow"><option value="hardware">Hardware (RTS/CTS)</option><option value="none">None</option></select></label>
       <div class="btnrow"><button id="cdConnect" class="primary">Connect cutter</button><button id="cdTest">Test cut</button></div>
@@ -535,10 +539,10 @@ const DEFAULTS = {
   nestGap:3, nestRotate:true, jobName:'', customer:'',
   currency:'', pricePerM:10, chargeUsedWidth:false, cutPerM:1, weedPerPiece:0.05, setupFee:2, markup:30, qty:1,
   hiddenLayers:[], material:0, curColor:'#111111',
-  safeMaxWidth:600, originFromLeft:0, safeMaxLength:3000, safeConfirm:true, showArea:false, areaOn:true, testF:false, sideView:false, guide:null, bladeOffset:0, weedLines:false,
+  lang:'dmpl', profile:'c630', safeMaxWidth:600, originFromLeft:0, safeMaxLength:3000, safeConfirm:true, showArea:false, areaOn:true, testF:false, sideView:false, guide:null, bladeOffset:0, weedLines:false,
   pcShow:false, pcPage:'A4', pcOrient:'portrait', pcInset:12, pcPrintAll:true
 };
-const MACHINE_KEYS=['vinylWidth','unitsX','unitsY','swapXY','flipAcross','flipFeed','margin','baud','flow','header','footer','safeMaxWidth','originFromLeft','safeMaxLength'];
+const MACHINE_KEYS=['vinylWidth','unitsX','unitsY','swapXY','flipAcross','flipFeed','margin','baud','flow','header','footer','safeMaxWidth','originFromLeft','safeMaxLength','lang','profile'];
 const DEFAULT_MATERIALS=[
   {name:'Standard sign vinyl', speed:300, force:80, passes:1, overcut:0.5, mirror:false},
   {name:'Heat transfer vinyl (HTV)', speed:250, force:70, passes:1, overcut:0.5, mirror:true},
@@ -553,7 +557,7 @@ const FONTS=['Arial','Arial Black','Bahnschrift','Calibri','Cambria','Candara','
 
 const safeJSON=s=>{ try{ return JSON.parse(s); }catch(e){ return null; } };
 let settings=Object.assign({}, DEFAULTS, safeJSON(localStorage.getItem('ic_settings'))||safeJSON(localStorage.getItem('vc_settings'))||{});
-if(/ECN|SP1/.test(settings.header||'')) settings.header=DEFAULTS.header; // this cutter rejects ECN/SP1 (verified 2026-11-23)
+if((settings.lang||'dmpl')==='dmpl'&&/ECN|SP1/.test(settings.header||'')) settings.header=DEFAULTS.header; // this cutter rejects ECN/SP1 (verified 2026-11-23)
 let materials=safeJSON(localStorage.getItem('ic_materials'))||JSON.parse(JSON.stringify(DEFAULT_MATERIALS));
 let objects=[], sel=new Set(), nextId=1;
 let view={z:1,ox:40,oy:30}, undoStack=[], redoStack=[], preview=false;
@@ -1874,12 +1878,40 @@ async function connect(){
     else toast('Could not connect: '+e.message,true); return false; } }
 async function autoConnect(){ if(!('serial' in navigator)) return; try{ const ps=await navigator.serial.getPorts(); if(ps.length===1) await openPort(ps[0]); }catch(e){} }
 if('serial' in navigator) navigator.serial.addEventListener('disconnect',e=>{ if(port&&e.target===port){ port=null; setConn(false,'Cutter unplugged'); toast('Cutter disconnected.',true); } });
+/* ---- plotter profiles & languages: jobs are built in DMPL form, checked for safety, then translated ---- */
+const PROFILES={
+  c630:{name:'630 vinyl cutter (DMPL) – tested',lang:'dmpl',baud:38400,flow:'hardware',unitsX:40,unitsY:40,header:';:H A L0',footer:'@ @',note:'Tested on the real machine: 20 mm test cut exact.'},
+  hpgl:{name:'HPGL cutter – Redsail, Liyu, Jinka, Vicsign, Teneth, Creation, most Chinese cutters',lang:'hpgl',baud:9600,flow:'hardware',unitsX:40,unitsY:40,header:'IN;',footer:'PU;',note:'Most common language. If 9600 does not move it, try 38400 or 115200.'},
+  roland:{name:'Roland (CAMM-GL III / HPGL mode)',lang:'hpgl',baud:9600,flow:'hardware',unitsX:40,unitsY:40,header:'IN;',footer:'PU;',note:'Set the Roland to its HPGL / "CAMM-GL III mode 2" command set. Serial models only.'},
+  gpgl:{name:'Graphtec / GP-GL cutter',lang:'gpgl',baud:9600,flow:'hardware',unitsX:10,unitsY:10,header:'',footer:'',note:'Starts at 10 steps/mm (0.1 mm) – safe side. If the 20 mm test square comes out 10 mm, set steps to 20.'},
+  dmpl:{name:'Other DMPL cutter',lang:'dmpl',baud:9600,flow:'hardware',unitsX:40,unitsY:40,header:';:H A L0',footer:'@ @',note:'Try 9600 first, then 38400.'},
+  custom:{name:'Custom (keep my settings)'}};
+const LANG_NAMES={dmpl:'DMPL',hpgl:'HPGL',gpgl:'GP-GL'};
+function applyProfile(id){ const p=PROFILES[id]; if(!p) return; settings.profile=id;
+  if(id!=='custom'){ for(const k of ['lang','baud','flow','unitsX','unitsY','header','footer']) settings[k]=p[k]; }
+  saveSettings(); syncSettingsUI(); refreshProfileUI(); refreshPropbar(); draw();
+  if(id!=='custom') toast(`${p.name.split(' –')[0]}: ${LANG_NAMES[p.lang]}, ${p.baud} baud. ${p.note} Always do a TEST CUT first and check the F.`);
+  if(port){ port.close().catch(()=>{}).then(()=>openPort(port)).catch(()=>{ port=null; setConn(false,'Not connected'); }); } }
+function refreshProfileUI(){ for(const s of $$('.profSel')) s.value=PROFILES[settings.profile]?settings.profile:'custom';
+  for(const h of $$('.profNote')){ const p=PROFILES[settings.profile]; h.textContent=(p&&p.note?p.note+' ':'')+'Language: '+(LANG_NAMES[settings.lang]||settings.lang)+' · '+settings.baud+' baud · '+settings.unitsX+' steps/mm'; } }
+function translateJob(text){ const lang=settings.lang||'dmpl'; if(lang==='dmpl') return text;
+  const re=/(?:^|\s)([UD])(?:(-?\d+),(-?\d+))?(?=\s|$)/g, ops=[]; let m;
+  while((m=re.exec(text))) ops.push({d:m[1]==='D',p:m[2]!==undefined?[+m[2],+m[3]]:null});
+  const out=[];
+  if(lang==='hpgl'){ out.push(settings.header||'IN;'); let run=null;
+    const flush=()=>{ if(run&&run.length){ out.push('PD'+run.map(p=>p[0]+','+p[1]).join(',')+';'); } run=null; };
+    for(const o of ops){ if(o.d&&o.p){ (run=run||[]).push(o.p); } else { flush(); out.push(o.p?'PU'+o.p[0]+','+o.p[1]+';':'PU;'); } }
+    flush(); out.push(settings.footer||'PU;'); return out.join('\n')+'\n'; }
+  if(lang==='gpgl'){ if(settings.header) out.push(settings.header);
+    for(const o of ops){ if(!o.p) continue; out.push((o.d?'D':'M')+o.p[0]+','+o.p[1]); }
+    if(settings.footer) out.push(settings.footer); return out.join('\x03')+'\x03'; }
+  return text; }
 async function sendToCutter(text,opts){ opts=opts||{};
   if(sending) return false;
   const sc=safetyCheck(text); if(!sc.ok){ toast('BLOCKED for safety: '+sc.why.join('; ')+'. ('+originText()+'.) Check ⚙ Cutter settings → Safety.',true); return false; }
   if(opts.confirm&&settings.safeConfirm&&sc.e&&!confirm(`${opts.confirm}: `+r2(sc.e.aMax-Math.max(0,sc.e.aMin))+' mm across × '+r2(sc.e.fMax-Math.max(0,sc.e.fMin))+' mm long.\n(Room: '+safeW()+' × '+settings.safeMaxLength+' mm — '+originText()+')\n\nVinyl loaded, rollers down, Origin pressed?\nCut now?')) return false;
   if(!port){ const ok=await connect(); if(!ok||!port) return false; }
-  const bytes=new TextEncoder().encode(text); sending=true; cancelSend=false;
+  const bytes=new TextEncoder().encode(translateJob(text)); sending=true; cancelSend=false;
   $('#progress').style.display='block'; $('#bStop').style.display=''; $('#bCut').disabled=$('#bTest').disabled=true;
   const bar=$('#progress>div'); let writer, ok=false;
   try{ writer=port.writable.getWriter();
@@ -1912,8 +1944,8 @@ async function testCut(){
   if(!confirm(settings.testF?'Test cut: 20 mm square + letter F.\n\nMeasure the square and check the F is not mirrored or sideways.\n\nSend now?':'Test cut: 20 mm square.\n\nMeasure it – it should be exactly 20 mm.\n\nSend now?')) return;
   await sendToCutter(buildDMPL(buildJob(null,items))); }
 function savePlt(){ const ls=layersInUse().filter(l=>!isHidden(l.color)); if(!ls.length){ toast('Nothing to save.',true); return; }
-  if(ls.length===1) download(new Blob([buildDMPL(buildJob(null))]),'cut-job.plt');
-  else for(const l of ls) download(new Blob([buildDMPL(buildJob([l.color]))]),`cut-job-${colorName(l.color).replace(/[^\w-]/g,'')}.plt`);
+  if(ls.length===1) download(new Blob([translateJob(buildDMPL(buildJob(null)))]),'cut-job.plt');
+  else for(const l of ls) download(new Blob([translateJob(buildDMPL(buildJob([l.color])))]),`cut-job-${colorName(l.color).replace(/[^\w-]/g,'')}.plt`);
   toast('Saved. Drag a .plt onto “Send file to cutter” to cut it.'); }
 /* ---------- export for Silhouette Studio / other software ---------- */
 function exportGeometry(){ const shown=objects.filter(o=>vis(o)); if(!shown.length){ toast('Nothing to export.',true); return null; }
@@ -1948,12 +1980,12 @@ async function openProject(file){ const d=safeJSON(await file.text()); if(!d||!A
 /* ======================= settings UI / wiring ======================= */
 function syncSettingsUI(){ $$('[data-s]').forEach(el=>{ const v=settings[el.dataset.s]; if(el.type==='checkbox') el.checked=!!v; else el.value=v??''; }); }
 $$('[data-s]').forEach(el=>el.addEventListener('change',async()=>{ const k=el.dataset.s; let v=el.type==='checkbox'?el.checked:el.value;
-  if(el.type==='number'){ v=parseFloat(v); if(!isFinite(v)) return; } if(k==='baud') v=+v; settings[k]=v; saveSettings(); refreshQuote(); if(k==='mirror'||k==='areaOn'||k==='originFromLeft'||k==='safeMaxWidth') refreshPropbar(); updateRoom(); draw();
+  if(el.type==='number'){ v=parseFloat(v); if(!isFinite(v)) return; } if(k==='baud') v=+v; settings[k]=v; saveSettings(); refreshQuote(); if(['lang','baud','flow','unitsX','unitsY','header','footer'].includes(k)){ settings.profile='custom'; saveSettings(); refreshProfileUI(); } if(k==='mirror'||k==='areaOn'||k==='originFromLeft'||k==='safeMaxWidth') refreshPropbar(); updateRoom(); draw();
   if((k==='baud'||k==='flow')&&port){ try{ await port.close(); await openPort(port); }catch(e){ port=null; setConn(false,'Not connected'); } } }));
 $('#bReset').onclick=()=>{ if(!confirm('Reset machine settings to the working defaults (DMPL, 38400 baud)?')) return; for(const k of MACHINE_KEYS) settings[k]=DEFAULTS[k]; saveSettings(); syncSettingsUI(); draw(); };
 /* ---------- Cutter Settings window ---------- */
 function refreshCutterDlg(){ const s=$('#cdMat'); s.innerHTML=materials.map((m,i)=>`<option value="${i}" ${i==settings.material?'selected':''}>${escapeHtml(m.name)}</option>`).join('');
-  const m=materials[settings.material]||{}; $('#cdSpeed').textContent=m.speed??'–'; $('#cdForce').textContent=m.force??'–'; syncSettingsUI(); updateRoom(); }
+  const m=materials[settings.material]||{}; $('#cdSpeed').textContent=m.speed??'–'; $('#cdForce').textContent=m.force??'–'; syncSettingsUI(); updateRoom(); refreshProfileUI(); }
 function openCutterSettings(){ refreshCutterDlg(); $('#cutDlg').showModal(); }
 function closeCutterSettings(){ $('#cutDlg').close(); syncSettingsUI(); refreshMaterials(); refreshQuote(); draw(); }
 $('#bCutSet').onclick=openCutterSettings;
@@ -1993,7 +2025,7 @@ cv.addEventListener('dragover',e=>e.preventDefault());
 cv.addEventListener('drop',e=>{ e.preventDefault(); for(const f of e.dataTransfer.files) importAny(f); });
 
 (function init(){
-  fillFontList(FONTS); syncSettingsUI(); refreshMaterials(); buildLibrary(); $$('#toolbox [data-tool="select"]')[0].classList.add('on');
+  fillFontList(FONTS); syncSettingsUI(); refreshProfileUI(); refreshMaterials(); buildLibrary(); $$('#toolbox [data-tool="select"]')[0].classList.add('on');
   const saved=safeJSON(localStorage.getItem('ic_project'))||safeJSON(localStorage.getItem('vc_project'));
   if(saved&&Array.isArray(saved.objects)){ objects=saved.objects.map(o=>Object.assign({color:'#111111'},o)); nextId=saved.nextId||1; }
   changed(); fit();

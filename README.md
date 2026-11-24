@@ -4,7 +4,17 @@
 
 **Vinyl cutter software that runs in your browser.** Design stickers, signs and heat-transfer vinyl and cut them directly on a USB vinyl cutter. You don't need to install anything: it is a single HTML file that uses Web Serial in Google Chrome or Microsoft Edge, on Windows and Mac.
 
-It was built for and tested on a **630 mm "Cutter type 630" vinyl cutter** (USB, FTDI serial chip, DMPL language). It should also work with other DMPL cutters after you check the settings.
+It was built for and tested on a **630 mm "Cutter type 630" vinyl cutter** (USB, FTDI serial chip, DMPL language). It also has profiles for other serial plotters:
+
+| Cutter model | Language | Status |
+|---|---|---|
+| 630 vinyl cutter | DMPL, 38400 | Tested |
+| Redsail, Liyu, Jinka, Vicsign, Teneth, Creation and most Chinese cutters | HPGL | Profile ready, not yet tested |
+| Roland (serial, HPGL mode) | HPGL | Profile ready, not yet tested |
+| Graphtec and other GP-GL cutters | GP-GL | Profile ready, not yet tested |
+| Other DMPL cutters | DMPL | Profile ready, not yet tested |
+
+The plotter must show up as a **serial (COM) port**. USB-only craft cutters (Silhouette Cameo, Cricut, Brother ScanNCut) can't be driven directly: export DXF/SVG for their own software.
 
 ![Invow Cut screenshot](docs/screenshot.png)
 
