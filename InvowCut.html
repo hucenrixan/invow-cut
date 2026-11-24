@@ -206,12 +206,24 @@ h3{color:#6b7280}
     <div id="progress"><div></div></div>
     <span class="dot" id="dot"></span><span id="connText">Not connected</span>
     <button id="bCutSet" title="Cutter settings: connection, material, force, size">⚙ Cutter settings</button><button id="bConnect">Connect cutter</button>
+    <button id="bMove" title="Arrow pad: move the design on the vinyl, then check with the blade">✥ Move</button>
     <button id="bShow" title="Blade UP: the head travels around the outer box of your design (nothing is cut), then goes home">Show position</button>
     <button id="bTest" title="20 mm square + letter F">Test cut</button>
     <button id="bCut" class="go">CUT ▶</button>
     <button id="bStop" class="danger" style="display:none">Stop</button>
   </div>
 </header>
+<div id="movePad" style="display:none;position:fixed;right:14px;top:96px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.18);width:190px;user-select:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>Move design</b><button id="mpClose" style="padding:1px 7px">✕</button></div>
+  <div style="display:grid;grid-template-columns:repeat(3,44px);grid-auto-rows:40px;gap:4px;justify-content:center">
+    <span></span><button data-mv="0,-1" title="Up">▲</button><span></span>
+    <button data-mv="-1,0" title="Left">◀</button><button id="mpShow" title="Blade up: trace the design box">◎</button><button data-mv="1,0" title="Right">▶</button>
+    <span></span><button data-mv="0,1" title="Down">▼</button><span></span>
+  </div>
+  <label style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">Step <select id="mpStep"><option>0.5</option><option>1</option><option selected>5</option><option>10</option><option>50</option></select> mm</label>
+  <label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="mpAuto"> Move blade after each press</label>
+  <div class="hint" style="margin-top:6px;font-size:12px;color:var(--muted)">Moves the selected objects (or everything if none selected). ◎ = blade-up trace of the design box.</div>
+</div>
 <div id="propbar"></div>
 <main>
   <nav id="toolbox">
@@ -2193,7 +2205,14 @@ $('#bAddFont').onclick=()=>$('#fFont').click(); $('#fFont').onchange=e=>{ addFon
 $('#bDxf').onclick=exportDXF; $('#bSil').onclick=exportSilhouette; $('#bSvgOut').onclick=exportSVG;
 $('#bPC').onclick=openPC;
 $('#tlBtnOut').onclick=addOutlineLayer; $('#tlBtnShadow').onclick=addShadowLayer; $('#tlBtnBridge').onclick=stencilBridges; $('#tlBtnNames').onclick=namesList; $('#tlBtnQR').onclick=addQR; $('#tlBtnTile').onclick=tileDesign; $('#tlBtnStones').onclick=rhinestones; $('#fPrint').onchange=e=>{ const f=e.target.files[0]; if(f) addPrintImage(f); e.target.value=''; };
-$('#bConnect').onclick=connect; $('#bCut').onclick=cut; $('#bTest').onclick=testCut; $('#bShow').onclick=showPosition; $('#bStop').onclick=()=>{ cancelSend=true; }; $('#bPlt').onclick=savePlt;
+$('#bConnect').onclick=connect; $('#bCut').onclick=cut; $('#bTest').onclick=testCut; $('#bShow').onclick=showPosition;
+$('#bMove').onclick=()=>{ const p=$('#movePad'); p.style.display=p.style.display==='none'?'block':'none'; };
+$('#mpClose').onclick=()=>{ $('#movePad').style.display='none'; };
+$('#mpShow').onclick=showPosition;
+$$('#movePad [data-mv]').forEach(b=>b.onclick=async()=>{ const [dx,dy]=b.dataset.mv.split(',').map(Number), st=parseFloat($('#mpStep').value)||5;
+  const list=sel.size?selected():objects.filter(o=>vis(o)); const mv=list.filter(o=>!o.lock); if(!mv.length){ toast('Nothing to move.',true); return; }
+  pushUndo(); for(const o of mv){ o.x+=dx*st; o.y+=dy*st; } changed();
+  if($('#mpAuto').checked&&!sending) await showPosition(); }); $('#bStop').onclick=()=>{ cancelSend=true; }; $('#bPlt').onclick=savePlt;
 cv.addEventListener('dragover',e=>e.preventDefault());
 cv.addEventListener('drop',e=>{ e.preventDefault(); for(const f of e.dataTransfer.files) importAny(f); });
 
