@@ -1,4 +1,5 @@
-﻿INVOW CUT 2 - vinyl cutter software
+INVOW CUT 2 - vinyl cutter software
+Developed by INVOW MALDIVES
 ===================================
 START
   Windows: double-click "Invow Cut" on the Desktop (or "Start Invow Cut.bat").

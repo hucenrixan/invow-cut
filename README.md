@@ -1,5 +1,7 @@
 # Invow Cut
 
+**Developed by INVOW MALDIVES**
+
 **Vinyl cutter software that runs in your browser.** Design stickers, signs and heat-transfer vinyl and cut them directly on a USB vinyl cutter. You don't need to install anything: it is a single HTML file that uses Web Serial in Google Chrome or Microsoft Edge, on Windows and Mac.
 
 It was built for and tested on a **630 mm "Cutter type 630" vinyl cutter** (USB, FTDI serial chip, DMPL language). It should also work with other DMPL cutters after you check the settings.
